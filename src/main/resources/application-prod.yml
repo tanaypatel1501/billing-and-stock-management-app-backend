@@ -1,0 +1,22 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+app:
+  client:
+    url: ${CLIENT_URL}
+
+jwt:
+  secret: ${JWT_SECRET}
+  refreshExpirationMs: ${JWT_REFRESH_EXPIRATION_MS:1800000}
