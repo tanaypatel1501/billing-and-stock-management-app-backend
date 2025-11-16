@@ -10,8 +10,15 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none                       # Turn off auto DDL
+      properties:
+        hibernate.jdbc.lob.non_contextual_creation: true  # Reduce Hibernate overhead
+        hibernate.generate_statistics: false             # Disable extra stats
+        hibernate.temp.use_jdbc_metadata_defaults: false # Reduce metadata checks
     show-sql: false
+
+  main:
+    allow-bean-definition-overriding: true # Sometimes helps with slow startup
 
 app:
   client:
