@@ -22,5 +22,8 @@ RUN ./mvnw package -DskipTests
 # Expose port (same as server.port in application.yml)
 EXPOSE 8080
 
-# Run the produced jar
-CMD ["java", "-jar", "target/billing-and-stock-management-app-0.0.1-SNAPSHOT.jar"]
+# Copy the built JAR (wildcard → handles any jar name)
+RUN cp target/*.jar app.jar
+
+# Run the produced JAR
+CMD ["java", "-jar", "app.jar"]
