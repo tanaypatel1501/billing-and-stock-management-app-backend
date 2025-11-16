@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.gst.billingandstockmanagement.dto.SignupDTO;
 import com.gst.billingandstockmanagement.dto.UserDTO;
@@ -20,6 +21,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
+    @Transactional
     public UserDTO createUser(SignupDTO signupDTO) {
         User user = new User();
         user.setFirstname(signupDTO.getFirstname());
