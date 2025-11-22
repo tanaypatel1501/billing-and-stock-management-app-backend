@@ -1,32 +1,35 @@
 package com.gst.billingandstockmanagement.services.healthcheck;
 
-import com.gst.billingandstockmanagement.repository.HealthCheckRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate; // Re-import JdbcTemplate
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 @Service
 public class HealthCheckServiceImpl implements HealthCheckService {
 
-    private final HealthCheckRepository healthCheckRepository;
+    // Dependency to check database connectivity
+    private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public HealthCheckServiceImpl(HealthCheckRepository healthCheckRepository) {
-        this.healthCheckRepository = healthCheckRepository;
+    // Inject JdbcTemplate instead of HealthCheckRepository
+    public HealthCheckServiceImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public Map<String, String> checkHealth() {
         Map<String, String> statusMap = new HashMap<>();
 
+        // Check 1: Application Status (UP if bean initialized)
         statusMap.put("application", "UP");
 
-        // Run the database check and update the map with the full result
+        // Check 2: Database Connectivity (Most Important)
         Map<String, String> dbDetails = checkDatabaseConnection();
-        statusMap.putAll(dbDetails); // Add database status AND timestamp to the map
+        statusMap.putAll(dbDetails); // Add database status AND timestamp/error to the map
 
         // Determine overall status based on the specific database status key
         if ("UP".equals(statusMap.get("database_status"))) {
@@ -41,18 +44,20 @@ public class HealthCheckServiceImpl implements HealthCheckService {
     private Map<String, String> checkDatabaseConnection() {
         Map<String, String> dbMap = new HashMap<>();
         try {
-            // Get the timestamp from the database
-            Object dbTime = healthCheckRepository.getCurrentDbTime();
+            // Execute the non-destructive query to get the current timestamp
+            // Using String.class for flexibility, as different DBs return different timestamp types.
+            String dbTime = jdbcTemplate.queryForObject("SELECT CURRENT_TIMESTAMP()", String.class);
 
             // Add the success status and the actual timestamp value
             dbMap.put("database_status", "UP");
-            dbMap.put("database_timestamp", dbTime.toString());
+            dbMap.put("database_timestamp", dbTime);
 
             // Add the local time the check was performed for context
             dbMap.put("check_time", LocalDateTime.now().toString());
 
             return dbMap;
         } catch (Exception e) {
+            // Log the exception for debugging purposes
             System.err.println("Database check failed: " + e.getMessage());
 
             // Add failure status and error details
