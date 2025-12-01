@@ -20,3 +20,8 @@ app:
 jwt:
   secret: ${JWT_SECRET:dev-secret}
   refreshExpirationMs: ${JWT_REFRESH_EXPIRATION_MS:1800000}
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
