@@ -21,7 +21,7 @@ public interface PostalRepository extends JpaRepository<IndiaPostalData, Integer
 
     // 3. Cities
     @Query(value = "SELECT DISTINCT TRIM(t.district) FROM india_postal_data t " +
-            "WHERE UPPER(TRIM(t.statename)) = UPPER(TRIM(:state)) ORDER BY t.district",
+            "WHERE UPPER(TRIM(t.statename)) = UPPER(TRIM(:state)) ORDER BY TRIM(t.district)",
             nativeQuery = true)
     List<String> findDistinctDistrictsByState(@Param("state") String state);
 
@@ -40,4 +40,10 @@ public interface PostalRepository extends JpaRepository<IndiaPostalData, Integer
             "WHERE UPPER(TRIM(t.district)) = UPPER(TRIM(:district)) LIMIT 1",
             nativeQuery = true)
     String findStateByDistrict(@Param("district") String district);
+
+    // 6. Fallback: find by pincode string (handles DBs that store pincodes as CHAR/VARCHAR or with leading zeros)
+    // Using MySQL syntax to cast pincode to CHAR. If you use Postgres, change CAST(... AS TEXT) instead.
+    @Query(value = "SELECT * FROM india_postal_data p WHERE CAST(p.pincode AS CHAR) = :pincode LIMIT 1",
+            nativeQuery = true)
+    IndiaPostalData findByPincodeString(@Param("pincode") String pincode);
 }

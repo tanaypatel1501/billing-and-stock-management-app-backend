@@ -12,4 +12,11 @@ public class AddressLookupDTO {
     private String pincode;
     private String district;
     private String statename;
+
+    // Constructor to support JPQL constructor expression when p.pincode is an Integer
+    public AddressLookupDTO(Integer pincode, String district, String statename) {
+        this.pincode = pincode == null ? null : pincode.toString();
+        this.district = district;
+        this.statename = statename;
+    }
 }
