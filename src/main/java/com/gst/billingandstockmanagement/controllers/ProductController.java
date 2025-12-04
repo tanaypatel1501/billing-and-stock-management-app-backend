@@ -3,6 +3,7 @@ package com.gst.billingandstockmanagement.controllers;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -10,9 +11,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.gst.billingandstockmanagement.dto.ProductDTO;
+import com.gst.billingandstockmanagement.dto.BulkProductResponse;
 import com.gst.billingandstockmanagement.services.product.ProductService;
 
 
@@ -50,5 +54,10 @@ public class ProductController {
     public ProductDTO editProduct(@PathVariable Long productId, @RequestBody ProductDTO productDTO) {
         // Use the ProductService to edit the product with the given ID
         return productService.editProduct(productId, productDTO);
+    }
+
+    @PostMapping(path = "/bulk", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public BulkProductResponse uploadBulkProducts(@RequestParam("file") MultipartFile file) {
+        return productService.handleBulkUpload(file);
     }
 }

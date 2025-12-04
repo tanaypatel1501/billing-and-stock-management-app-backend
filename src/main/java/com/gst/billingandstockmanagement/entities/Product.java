@@ -15,9 +15,9 @@ public class Product {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
 	private String name;
-	private String HSN; 
+	private String HSN;
 	private Double MRP;
 	private Double CGST;
 	private Double SGST;
-	private String Packing;
+	private String packing;
 }
