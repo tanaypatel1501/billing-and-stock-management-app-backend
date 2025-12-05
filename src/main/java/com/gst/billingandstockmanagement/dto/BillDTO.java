@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.dto;
 
 import java.util.Date;
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -14,5 +15,6 @@ public class BillDTO {
     private Date invoiceDate;
 
     private Double totalAmount;
-}
 
+    private List<BillItemsDTO> billItems;
+}

@@ -3,6 +3,7 @@ package com.gst.billingandstockmanagement.services.bill;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.BillDTO;
+import com.gst.billingandstockmanagement.dto.BillItemsDTO;
 import com.gst.billingandstockmanagement.entities.Bill;
 import com.gst.billingandstockmanagement.entities.BillItems;
 import com.gst.billingandstockmanagement.entities.User;
@@ -68,22 +69,22 @@ public class BillServiceImpl implements BillService {
     }
     
     @Override
-    public Bill getBillById(Long billId) {
+    public BillDTO getBillById(Long billId) {
         // Fetch the Bill entity by its ID
         Bill bill = billRepository.findById(billId).orElse(null);
 
-        if (bill != null) {
-            // Fetch the associated BillItems
-            List<BillItems> billItems = bill.getBillItems();
-            // You can now access the associated BillItems through billItems
+        if (bill == null) {
+            return null;
         }
 
-        return bill;
+        BillDTO dto = convertToBillDTO(bill);
+        return dto;
     }
     
     @Override
-    public List<Bill> getAllBills() {
-        return billRepository.findAll();
+    public List<BillDTO> getAllBills() {
+        List<Bill> bills = billRepository.findAll();
+        return bills.stream().map(this::convertToBillDTO).collect(Collectors.toList());
     }
     
     @Override
@@ -117,7 +118,32 @@ public class BillServiceImpl implements BillService {
         billDTO.setDl2(bill.getDl2());
         billDTO.setGstin(bill.getGstin());
         billDTO.setInvoiceDate(bill.getInvoiceDate());
-        // You can set other properties as needed
+        billDTO.setTotalAmount(bill.getTotalAmount());
+
+        // Map bill items to DTOs using snapshot fields
+        if (bill.getBillItems() != null) {
+            List<BillItemsDTO> items = bill.getBillItems().stream().map(item -> {
+                BillItemsDTO it = new BillItemsDTO();
+                it.setId(item.getId());
+                it.setBillId(bill.getId());
+                it.setProductId(item.getProduct() != null ? item.getProduct().getId() : null);
+                it.setSnapshotProductName(item.getSnapshotProductName());
+                it.setSnapshotUnitPrice(item.getSnapshotUnitPrice());
+                it.setSnapshotPacking(item.getSnapshotPacking());
+                it.setSnapshotHsn(item.getSnapshotHsn());
+                it.setSnapshotCgst(item.getSnapshotCgst());
+                it.setSnapshotSgst(item.getSnapshotSgst());
+                it.setBatchNo(item.getBatchNo());
+                it.setQuantity(item.getQuantity());
+                it.setFree(item.getFree());
+                it.setRate(item.getRate());
+                it.setExpiryDate(item.getExpiryDate());
+                it.setAmount(item.getAmount());
+                return it;
+            }).collect(Collectors.toList());
+
+            billDTO.setBillItems(items);
+        }
 
         return billDTO;
     }

@@ -4,7 +4,6 @@ import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -25,9 +24,23 @@ public class BillItems {
 	
 	@ManyToOne(cascade = CascadeType.REMOVE)
     @JoinColumn(name = "product_id")
-	@JsonManagedReference // Include Product in JSON
+	@JsonIgnore // Do not serialize the live Product (use snapshots instead)
     private Product product;
 	
+	// Snapshot fields: copy current product details at the time of billing
+	@Column(name = "snapshot_product_name")
+	private String snapshotProductName;
+	@Column(name = "snapshot_unit_price")
+	private Double snapshotUnitPrice;
+    @Column(name= "snapshot_packing")
+    private String snapshotPacking;
+    @Column(name = "snapshot_hsn")
+    private String snapshotHsn;
+    @Column(name = "snapshot_cgst")
+    private Double snapshotCgst;
+    @Column(name = "snapshot_sgst")
+    private Double snapshotSgst;
+
 	private String batchNo;
 	private int quantity;
 	private int free;

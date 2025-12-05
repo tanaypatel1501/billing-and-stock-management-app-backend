@@ -10,9 +10,9 @@ public interface BillService {
 
 	void updateTotalAmount(Bill bill);
 
-	Bill getBillById(Long billId);
+	BillDTO getBillById(Long billId);
 
-	List<Bill> getAllBills();
+	List<BillDTO> getAllBills();
 
 	List<BillDTO> getAllBillsByUser(Long userId);
 

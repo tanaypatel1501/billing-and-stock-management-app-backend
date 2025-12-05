@@ -8,9 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.gst.billingandstockmanagement.dto.BillDTO;
-import com.gst.billingandstockmanagement.entities.Bill;
-import com.gst.billingandstockmanagement.entities.Stock;
-import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.services.bill.BillService;
 
 
@@ -29,12 +26,16 @@ public class BillController {
 
     
     @GetMapping("/{billId}")
-    public Bill getBillById(@PathVariable Long billId) {
-        return billService.getBillById(billId);
+    public ResponseEntity<BillDTO> getBillById(@PathVariable Long billId) {
+        BillDTO dto = billService.getBillById(billId);
+        if (dto == null) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return new ResponseEntity<>(dto, HttpStatus.OK);
     }
     
     @GetMapping("/all")
-    public List<Bill> getAllBills() {
+    public List<BillDTO> getAllBills() {
         return billService.getAllBills();
     }
     
