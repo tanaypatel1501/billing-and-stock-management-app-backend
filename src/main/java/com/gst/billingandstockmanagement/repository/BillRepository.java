@@ -6,9 +6,10 @@ import com.gst.billingandstockmanagement.entities.User;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 
-public interface BillRepository extends JpaRepository<Bill, Long> {
+public interface BillRepository extends JpaRepository<Bill, Long>, JpaSpecificationExecutor<Bill> {
 
     // Custom query to calculate the total amount of a bill based on its bill items
     @Query("SELECT SUM(bi.amount) FROM BillItems bi WHERE bi.bill = ?1")

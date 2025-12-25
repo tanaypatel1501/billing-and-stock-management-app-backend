@@ -5,6 +5,8 @@ import java.util.List;
 import com.gst.billingandstockmanagement.dto.StockDTO;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.User;
+import org.springframework.data.domain.Page;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 
 public interface StockService {
     void addStock(StockDTO stockDTO);
@@ -12,4 +14,6 @@ public interface StockService {
     List<Stock> getStockByUser(User user);
 
 	void updateStock(StockDTO stockDTO);
+
+	Page<Stock> searchWithPagination(SearchRequest request);
 }

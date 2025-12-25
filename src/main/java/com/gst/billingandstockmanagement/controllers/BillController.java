@@ -6,9 +6,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.gst.billingandstockmanagement.dto.BillDTO;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.services.bill.BillService;
+import com.gst.billingandstockmanagement.entities.Bill;
 
 
 @RestController
@@ -35,8 +39,15 @@ public class BillController {
     }
     
     @GetMapping("/all")
-    public List<BillDTO> getAllBills() {
-        return billService.getAllBills();
+    public ResponseEntity<Page<Bill>> getAllBills(
+            @RequestParam(name = "page", required = false, defaultValue = "0") int page,
+            @RequestParam(name = "size", required = false, defaultValue = "20") int size
+    ) {
+        SearchRequest req = new SearchRequest();
+        req.setPage(page);
+        req.setSize(size);
+        Page<Bill> p = billService.searchWithPagination(req);
+        return ResponseEntity.ok(p);
     }
     
     @GetMapping("/user/{userId}")
@@ -48,5 +59,11 @@ public class BillController {
     @DeleteMapping("/delete/{billId}")
     public void deleteBill(@PathVariable Long billId) {
         billService.deleteBill(billId);
+    }
+
+    @PostMapping("/search")
+    public ResponseEntity<Page<Bill>> searchBills(@RequestBody SearchRequest request) {
+        Page<Bill> p = billService.searchWithPagination(request);
+        return ResponseEntity.ok(p);
     }
 }

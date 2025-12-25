@@ -1,12 +1,15 @@
 package com.gst.billingandstockmanagement.services.stock;
 
 import com.gst.billingandstockmanagement.dto.StockDTO;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.entities.Product;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.ProductRepository;
 import com.gst.billingandstockmanagement.repository.StockRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
+import com.gst.billingandstockmanagement.utils.PaginationUtils;
+import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
 
 import java.util.List;
 import java.time.LocalDate;
@@ -14,6 +17,8 @@ import java.time.ZoneId;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class StockServiceImpl implements StockService {
@@ -35,7 +40,7 @@ public class StockServiceImpl implements StockService {
         Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), stockDTO.getExpiryDate());
 
         if (existingStock != null) {
-        	
+
         	// Convert both dates to LocalDate for comparison
             LocalDate existingExpiryDate = existingStock.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             LocalDate dtoExpiryDate = stockDTO.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
@@ -103,6 +108,14 @@ public class StockServiceImpl implements StockService {
         } else {
             throw new RuntimeException("Stock not found");
         }
+    }
+
+    @Override
+    public Page<Stock> searchWithPagination(SearchRequest request) {
+        SpecificationBuilder<Stock> builder = new SpecificationBuilder<>();
+        List<String> fields = List.of("batchNo", "product.name", "product.HSN");
+        Pageable pageable = PaginationUtils.getPageable(request);
+        return stockRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
 
 }

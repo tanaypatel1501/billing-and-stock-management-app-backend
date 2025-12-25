@@ -9,13 +9,19 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.data.domain.Page;
 
 import com.gst.billingandstockmanagement.dto.ProductDTO;
 import com.gst.billingandstockmanagement.dto.BulkProductResponse;
 import com.gst.billingandstockmanagement.dto.BulkRowResult;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.entities.Product;
 import com.gst.billingandstockmanagement.repository.ProductRepository;
 import com.gst.billingandstockmanagement.utils.FileParser;
+import com.gst.billingandstockmanagement.utils.PaginationUtils;
+import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
+
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -188,6 +194,15 @@ public class ProductServiceImpl implements ProductService {
         resp.setFailed(errors.size());
         resp.setErrors(errors);
         return resp;
+    }
+
+    @Override
+    public Page<Product> searchWithPagination(SearchRequest request) {
+        SpecificationBuilder<Product> builder = new SpecificationBuilder<>();
+        // choose searchable fields for Product
+        List<String> fields = List.of("name", "HSN", "packing");
+        Pageable pageable = PaginationUtils.getPageable(request);
+        return productRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
 
 	private void applyRowToProductWithValidation(Map<String, String> row, Product p) {

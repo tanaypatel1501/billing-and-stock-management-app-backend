@@ -4,14 +4,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.BillDTO;
 import com.gst.billingandstockmanagement.dto.BillItemsDTO;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.entities.Bill;
 import com.gst.billingandstockmanagement.entities.BillItems;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.BillRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
 import com.gst.billingandstockmanagement.repository.BillItemsRepository;
+import com.gst.billingandstockmanagement.utils.PaginationUtils;
+import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class BillServiceImpl implements BillService {
@@ -167,6 +172,14 @@ public class BillServiceImpl implements BillService {
         } else {
             throw new RuntimeException("Bill not found with ID: " + billId);
         }
+    }
+
+    @Override
+    public Page<Bill> searchWithPagination(SearchRequest request) {
+        SpecificationBuilder<Bill> builder = new SpecificationBuilder<>();
+        List<String> fields = List.of("purchaserName", "gstin", "billItems.snapshotProductName","invoiceDate");
+        Pageable pageable = PaginationUtils.getPageable(request);
+        return billRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
 
 }

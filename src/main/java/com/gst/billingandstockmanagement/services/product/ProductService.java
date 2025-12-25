@@ -4,6 +4,9 @@ import com.gst.billingandstockmanagement.dto.ProductDTO;
 import com.gst.billingandstockmanagement.dto.BulkProductResponse;
 import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import com.gst.billingandstockmanagement.entities.Product;
+import com.gst.billingandstockmanagement.dto.SearchRequest;
 
 public interface ProductService {
 
@@ -19,4 +22,7 @@ public interface ProductService {
 
     // Bulk upload products from CSV or Excel file. Returns a report with per-row errors.
     BulkProductResponse handleBulkUpload(MultipartFile file);
+
+    // Search with pagination
+    Page<Product> searchWithPagination(SearchRequest request);
 }
