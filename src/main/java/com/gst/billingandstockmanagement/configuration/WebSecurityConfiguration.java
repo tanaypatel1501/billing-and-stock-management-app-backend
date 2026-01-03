@@ -45,7 +45,7 @@ public class WebSecurityConfiguration {
                 // Replaces: .authorizeHttpRequests().requestMatchers(...).permitAll().and().authorizeHttpRequests().requestMatchers(...).authenticated().and()
                 .authorizeHttpRequests(authorize -> authorize
                         // Public Endpoints
-                        .requestMatchers("/health-check", "/authenticate", "/sign-up", "/refresh-token").permitAll()
+                        .requestMatchers("/health-check", "/authenticate", "/sign-up", "/refresh-token", "/forgot-password", "/reset-password").permitAll()
                         // Authenticated Endpoints
                         .requestMatchers("/api/**").authenticated()
                         // Catch any other requests (often not necessary if the above covers all)

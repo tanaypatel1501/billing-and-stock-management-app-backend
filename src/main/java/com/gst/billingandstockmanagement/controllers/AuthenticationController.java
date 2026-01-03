@@ -1,7 +1,11 @@
 package com.gst.billingandstockmanagement.controllers;
 
 import java.io.IOException;
+import java.util.Map;
 
+import com.gst.billingandstockmanagement.dto.ForgotPasswordRequestDTO;
+import com.gst.billingandstockmanagement.dto.ResetPasswordDTO;
+import com.gst.billingandstockmanagement.services.resetpassword.PasswordResetService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -9,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -43,6 +48,9 @@ public class AuthenticationController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     public static final String TOKEN_PREFIX = "Bearer ";
     public static final String HEADER_STRING = "Authorization";
@@ -93,6 +101,33 @@ public class AuthenticationController {
         } else {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "The token cannot be refreshed.");
         }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(
+            @RequestBody ForgotPasswordRequestDTO request) {
+
+        passwordResetService.createAndSendResetToken(request.getEmail());
+
+        // Always return success (security best practice)
+        return ResponseEntity.ok(Map.of("message","If the email exists, a reset link has been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(
+            @RequestBody ResetPasswordDTO request) {
+
+        boolean success = passwordResetService
+                .resetPassword(request.getToken(), request.getNewPassword());
+
+        if (!success) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Invalid or expired reset token"));
+        }
+
+        return ResponseEntity.ok(
+                Map.of("message", "Password reset successful")
+        );
     }
 }
 

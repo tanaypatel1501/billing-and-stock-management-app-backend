@@ -13,9 +13,22 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME}
+    password: ${GMAIL_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 app:
   client:
     url: ${CLIENT_URL:http://localhost:4200/}
+    reset-password-url: ${RESET_PASSWORD_URL:${app.client.url}/reset-password}
 
 jwt:
   secret: ${JWT_SECRET:dev-secret}
@@ -35,3 +48,4 @@ tebi:
 
 branding:
   default-logo-url: https://s3.tebi.io/${TEBI_BUCKET_NAME}/logos/default-gst-medicose.png
+

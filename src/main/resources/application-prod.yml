@@ -10,19 +10,33 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none                       # Turn off auto DDL
+      ddl-auto: none
       properties:
-        hibernate.jdbc.lob.non_contextual_creation: true  # Reduce Hibernate overhead
-        hibernate.generate_statistics: false             # Disable extra stats
-        hibernate.temp.use_jdbc_metadata_defaults: false # Reduce metadata checks
+        hibernate.jdbc.lob.non_contextual_creation: true
+        hibernate.generate_statistics: false
+        hibernate.temp.use_jdbc_metadata_defaults: false
     show-sql: false
 
   main:
-    allow-bean-definition-overriding: true # Sometimes helps with slow startup
+    allow-bean-definition-overriding: true
+
+  spring:
+    mail:
+      host: smtp.gmail.com
+      port: 587
+      username: ${GMAIL_USERNAME}
+      password: ${GMAIL_APP_PASSWORD}
+      properties:
+        mail:
+          smtp:
+            auth: true
+            starttls:
+              enable: true
 
 app:
   client:
     url: ${CLIENT_URL}
+    reset-password-url: ${RESET_PASSWORD_URL:${app.client.url}/reset-password}
 
 jwt:
   secret: ${JWT_SECRET}
