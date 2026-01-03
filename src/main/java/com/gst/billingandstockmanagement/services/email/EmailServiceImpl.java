@@ -1,34 +1,55 @@
 package com.gst.billingandstockmanagement.services.email;
 
-import jakarta.mail.MessagingException;
+import com.google.api.services.gmail.Gmail;
+import com.google.api.services.gmail.model.Message;
+import jakarta.mail.Session;
+import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.util.Base64;
+import java.util.Properties;
+
 @Service
-public class EmailServiceImpl implements EmailService{
+public class EmailServiceImpl implements EmailService {
 
     @Autowired
-    private JavaMailSender mailSender;
+    private Gmail gmail;
+
+    @Value("${gmail.from-email}")
+    private String fromEmail;
 
     @Async
+    @Override
     public void sendEmail(String to, String subject, String htmlContent) {
+
         try {
-            MimeMessage mimeMessage = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, "utf-8");
+            Properties props = new Properties();
+            Session session = Session.getInstance(props, null);
 
-            helper.setText(htmlContent, true); // The 'true' flag enables HTML
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setFrom("gstmedicose@gmail.com");
+            MimeMessage email = new MimeMessage(session);
+            email.setFrom(new InternetAddress(fromEmail));
+            email.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(to));
+            email.setSubject(subject);
+            email.setContent(htmlContent, "text/html; charset=UTF-8");
 
-            mailSender.send(mimeMessage);
-            System.out.println("Styled HTML email sent successfully!");
-        } catch (MessagingException e) {
-            System.err.println("Failed to send HTML email: " + e.getMessage());
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            email.writeTo(buffer);
+
+            String encodedEmail = Base64.getUrlEncoder()
+                    .encodeToString(buffer.toByteArray());
+
+            Message message = new Message();
+            message.setRaw(encodedEmail);
+
+            gmail.users().messages().send("me", message).execute();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send email via Gmail API", e);
         }
     }
 }

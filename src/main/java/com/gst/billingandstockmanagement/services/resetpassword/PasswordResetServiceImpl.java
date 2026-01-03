@@ -8,9 +8,6 @@ import java.util.UUID;
 import com.gst.billingandstockmanagement.services.email.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -89,113 +86,130 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     }
 
     private void sendResetEmail(String email, String token) {
+
         String resetLink = resetPasswordUrl + "?token=" + token;
 
-        // Generate unique timestamp to prevent Gmail threading
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy 'at' hh:mm:ss a z");
-        String formattedDateTime = now.format(formatter.withZone(ZoneId.systemDefault()));
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy 'at' hh:mm:ss a");
+        String formattedDateTime = now.format(formatter);
         String uniqueId = UUID.randomUUID().toString();
 
-        String htmlContent = "<!DOCTYPE html>" +
-                "<html>" +
-                "<head>" +
-                "<meta charset='UTF-8'>" +
-                "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
-                "</head>" +
-                "<body style='margin: 0; padding: 0; background-color: #efefef; font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif;'>" +
+        String htmlContent =
+                "<!DOCTYPE html>" +
+                        "<html>" +
+                        "<head>" +
+                        "<meta charset='UTF-8'>" +
+                        "<meta name='viewport' content='width=device-width, initial-scale=1.0'>" +
+                        "</head>" +
 
-                "<!-- Unique identifier to prevent Gmail threading -->" +
-                "<div style='display: none; max-height: 0; overflow: hidden;'>" +
-                "Password Reset Request - " + formattedDateTime + " - ID: " + uniqueId +
-                "</div>" +
+                        "<body style='margin:0; padding:0; background-color:#efefef; " +
+                        "font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Arial, sans-serif;'>" +
 
-                "<table role='presentation' style='width: 100%; border-collapse: collapse; margin: 0; padding: 40px 20px;'>" +
-                "<tr><td align='center'>" +
+                        /* Hidden text to prevent Gmail threading */
+                        "<div style='display:none; max-height:0; overflow:hidden;'>" +
+                        "Reset your GST Medicose password. Security ID: " + uniqueId +
+                        "</div>" +
 
-                "<!-- Main Card -->" +
-                "<div style='max-width: 600px; background: #ffffff; border-radius: 24px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08); overflow: hidden;'>" +
+                        "<table role='presentation' width='100%' cellspacing='0' cellpadding='0' " +
+                        "style='background-color:#f4f7f6;'>" +
+                        "<tr>" +
+                        "<td align='center' style='padding:40px 10px;'>" +
 
-                "<!-- Header with Gradient -->" +
-                "<div style='background: linear-gradient(135deg, #48e3cc 0%, #36c5b0 100%); padding: 40px 30px; text-align: center;'>" +
-                "<h1 style='margin: 0; font-size: 28px; font-weight: 800; color: #000; letter-spacing: 0.5px;'>" +
-                "<span style='color: #000;'>GST</span> <span style='color: #000;'>Medicose</span>" +
-                "</h1>" +
-                "<p style='margin: 8px 0 0 0; font-size: 16px; color: rgba(0, 0, 0, 0.8); font-weight: 500;'>Management System</p>" +
-                "</div>" +
+                        "<div style='max-width:600px; width:100%; background:#ffffff; " +
+                        "border-radius:16px; box-shadow:0 4px 20px rgba(0,0,0,0.05); " +
+                        "border:1px solid #e1e8e5; overflow:hidden;'>" +
 
-                "<!-- Content -->" +
-                "<div style='padding: 40px 30px;'>" +
+                        /* ===== Header ===== */
+                        "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\">" +
+                        "<tr>" +
+                        "<td bgcolor=\"#121212\" align=\"center\" style=\"padding:45px 20px;\">" +
+                        "<h1 style=\"margin:0; font-size:32px; font-weight:800; color:#ffffff;\">" +
+                        "GST <span style=\"color:#48e3cc;\">Medicose</span>" +
+                        "</h1>" +
+                        "<p style=\"margin:10px 0 0; font-size:12px; color:#cccccc;\">" +
+                        "Management System" +
+                        "</p>" +
+                        "</td>" +
+                        "</tr>" +
+                        "</table>" +
 
-                "<!-- Greeting -->" +
-                "<h2 style='margin: 0 0 20px 0; font-size: 24px; font-weight: 800; color: #000;'>Password Reset Request</h2>" +
+                        /* ===== Content ===== */
+                        "<div style='padding:40px 30px;'>" +
 
-                "<p style='margin: 0 0 16px 0; font-size: 15px; color: #333; line-height: 1.6;'>" +
-                "Hello," +
-                "</p>" +
+                        "<h2 style='margin:0 0 20px; font-size:24px; font-weight:800; color:#000;'>" +
+                        "Password Reset Request</h2>" +
 
-                "<p style='margin: 0 0 16px 0; font-size: 15px; color: #333; line-height: 1.6;'>" +
-                "We received a request to reset your password for your GST Medicose account. Click the button below to create a new password:" +
-                "</p>" +
+                        "<p style='margin:0 0 16px; font-size:15px; color:#333; line-height:1.6;'>Hello,</p>" +
 
-                "<!-- CTA Button -->" +
-                "<table role='presentation' style='width: 100%; border-collapse: collapse; margin: 30px 0;'>" +
-                "<tr><td align='center'>" +
-                "<a href='" + resetLink + "' style='display: inline-block; background: linear-gradient(135deg, #48e3cc 0%, #36c5b0 100%); " +
-                "color: #000; padding: 16px 40px; text-decoration: none; border-radius: 12px; font-weight: 700; " +
-                "font-size: 16px; box-shadow: 0 4px 15px rgba(72, 227, 204, 0.3); transition: all 0.2s ease;'>" +
-                "Reset Password" +
-                "</a>" +
-                "</td></tr>" +
-                "</table>" +
+                        "<p style='margin:0 0 16px; font-size:15px; color:#333; line-height:1.6;'>" +
+                        "We received a request to reset your password for your GST Medicose account. " +
+                        "Click the button below to create a new password:" +
+                        "</p>" +
 
-                "<!-- Info Box -->" +
-                "<div style='background: #fff5e6; border-left: 4px solid #ff9800; padding: 16px 20px; border-radius: 8px; margin: 25px 0;'>" +
-                "<p style='margin: 0; font-size: 14px; color: #666; line-height: 1.5;'>" +
-                "<strong style='color: #ff9800;'>⚠️ Important:</strong> This link will expire in <strong>15 minutes</strong> for security reasons." +
-                "</p>" +
-                "</div>" +
+                        /* ===== CTA Button ===== */
+                        "<table role='presentation' width='100%' style='margin:30px 0;'>" +
+                        "<tr><td align='center'>" +
+                        "<a href='" + resetLink + "' " +
+                        "style='display:inline-block; background:linear-gradient(135deg,#48e3cc 0%,#36c5b0 100%);" +
+                        "color:#000; padding:16px 40px; text-decoration:none; border-radius:12px; " +
+                        "font-weight:700; font-size:16px; box-shadow:0 4px 15px rgba(72,227,204,0.3);'>" +
+                        "Reset Password</a>" +
+                        "</td></tr>" +
+                        "</table>" +
 
-                "<!-- Alternative Link -->" +
-                "<p style='margin: 20px 0 0 0; font-size: 13px; color: #777; line-height: 1.6;'>" +
-                "If the button doesn't work, copy and paste this link into your browser:" +
-                "</p>" +
-                "<p style='margin: 8px 0 0 0; font-size: 13px; color: #48e3cc; word-break: break-all; background: #f9f9f9; padding: 12px; border-radius: 6px;'>" +
-                resetLink +
-                "</p>" +
+                        /* ===== Expiry Warning ===== */
+                        "<table role='presentation' width='100%' " +
+                        "style='background-color:#fff9f0; border-radius:10px; border-left:4px solid #ffe8cc;'>" +
+                        "<tr><td style='padding:15px 20px;'>" +
+                        "<p style='margin:0; font-size:14px; color:#666; line-height:1.5;'>" +
+                        "<strong style='color:#856404; display:inline-flex; align-items:center;'>" +
+                        "<span style='margin-right:6px;'>⚠️</span>Important:</strong> " +
+                        "This link will expire in <strong>15 minutes</strong> for security reasons." +
+                        "</p>" +
+                        "</td></tr>" +
+                        "</table>" +
 
-                "</div>" +
+                        /* ===== Fallback Link ===== */
+                        "<div style='margin-top:40px; padding-top:30px; border-top:1px solid #eee;'>" +
 
-                "<!-- Footer -->" +
-                "<div style='background: #f9f9f9; padding: 30px; border-top: 1px solid #eee;'>" +
+                        "<p style='margin:0 0 10px; font-size:12px; color:#999;'>" +
+                        "If the button doesn't work, copy and paste this link into your browser:" +
+                        "</p>" +
 
-                "<!-- Divider -->" +
-                "<div style='height: 1px; background: linear-gradient(to right, transparent, #eee, transparent); margin: 0 0 20px 0;'></div>" +
+                        "<p style='" +
+                        "margin:8px 0 0; font-size:13px; color:#48e3cc; background:#f9f9f9; " +
+                        "padding:12px; border-radius:6px; white-space:nowrap; overflow-x:auto;'>" +
+                        resetLink +
+                        "</p>" +
 
-                "<!-- Security Notice -->" +
-                "<p style='margin: 0 0 12px 0; font-size: 13px; color: #999; line-height: 1.6;'>" +
-                "If you didn't request this password reset, please ignore this email. Your password will remain unchanged." +
-                "</p>" +
+                        "<p style='margin:10px 0 0; font-size:13px; color:#999; line-height:1.6;'>" +
+                        "If you didn't request this password reset, please ignore this email. " +
+                        "Your password will remain unchanged." +
+                        "</p>" +
+                        "</div>" +
+                        "</div>" +
 
-                "<!-- Timestamp -->" +
-                "<p style='margin: 0 0 12px 0; font-size: 12px; color: #bbb;'>" +
-                "Request sent: " + formattedDateTime +
-                "</p>" +
+                        /* ===== Footer ===== */
+                        "<div style='background:#fafafa; padding:40px; text-align:center; border-top:1px solid #f0f0f0;'>" +
+                        "<p style='margin:0 0 10px; font-size:13px; color:#666;'>" +
+                        "Need help? Contact us at " +
+                        "<a href='mailto:gstmedicose.support@gmail.com' " +
+                        "style='color:#48e3cc; text-decoration:none; font-weight:600'>gstmedicose.support@gmail.com</a>" +
+                        "</p>" +
 
-                "<!-- Footer Links -->" +
-                "<p style='margin: 0; font-size: 12px; color: #999; text-align: center;'>" +
-                "© 2025 GST Medicose Management System. All rights reserved." +
-                "</p>" +
+                        "<p style='margin:0; font-size:12px; color:#bbb;'>" +
+                        "Request sent on: " + formattedDateTime + " | ID: " + uniqueId.substring(0, 8) + "<br>" +
+                        "&copy; 2026 GST Medicose. All Rights Reserved." +
+                        "</p>" +
+                        "</div>" +
 
-                "</div>" +
-
-                "</div>" +
-
-                "</td></tr>" +
-                "</table>" +
-
-                "</body>" +
-                "</html>";
+                        "</div>" +
+                        "</td>" +
+                        "</tr>" +
+                        "</table>" +
+                        "</body>" +
+                        "</html>";
 
         emailService.sendEmail(email, "Reset Your Password - GST Medicose", htmlContent);
     }

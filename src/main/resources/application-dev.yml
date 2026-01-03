@@ -13,23 +13,11 @@ spring:
       ddl-auto: update
     show-sql: true
 
-  mail:
-    host: smtp.gmail.com
-    port: 465
-    username: ${GMAIL_USERNAME}
-    password: ${GMAIL_APP_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: false
-          ssl:
-            enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
-
+gmail:
+  client-id: ${GMAIL_CLIENT_ID}
+  client-secret: ${GMAIL_CLIENT_SECRET}
+  refresh-token: ${GMAIL_REFRESH_TOKEN}
+  from-email: gstmedicose@gmail.com
 
 app:
   client:
