@@ -10,7 +10,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: ${DDL_AUTO:none}
       properties:
         hibernate.jdbc.lob.non_contextual_creation: true
         hibernate.generate_statistics: false
