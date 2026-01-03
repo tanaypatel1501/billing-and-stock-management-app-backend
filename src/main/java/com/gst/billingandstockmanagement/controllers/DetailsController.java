@@ -1,10 +1,12 @@
 package com.gst.billingandstockmanagement.controllers;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import com.gst.billingandstockmanagement.dto.DetailsDTO;
 import com.gst.billingandstockmanagement.services.details.DetailsService;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -15,14 +17,28 @@ public class DetailsController {
     @Autowired
     private DetailsService detailsService;
 
-    @PostMapping("/create/{userId}")
-    public DetailsDTO createDetails(@RequestBody DetailsDTO detailsDTO) {
-        return detailsService.createDetails(detailsDTO);
+    @PostMapping(
+            value = "/create/{userId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public DetailsDTO createDetails(
+            @PathVariable Long userId,
+            @RequestPart("details") DetailsDTO detailsDTO,
+            @RequestPart(value = "logo", required = false) MultipartFile logo
+    ) {
+        return detailsService.createDetails(userId, detailsDTO, logo);
     }
 
-    @PutMapping("/update/{userId}")
-    public DetailsDTO updateDetails(@PathVariable Long userId, @RequestBody DetailsDTO detailsDTO) {
-        return detailsService.updateDetails(userId, detailsDTO);
+    @PutMapping(
+            value = "/update/{userId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public DetailsDTO updateDetails(
+            @PathVariable Long userId,
+            @RequestPart("details") DetailsDTO detailsDTO,
+            @RequestPart(value = "logo", required = false) MultipartFile logo
+    ) {
+        return detailsService.updateDetails(userId, detailsDTO, logo);
     }
 
     @DeleteMapping("/delete/{userId}")

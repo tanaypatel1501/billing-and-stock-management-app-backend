@@ -1,12 +1,15 @@
 package com.gst.billingandstockmanagement.services.details;
 
+import com.gst.billingandstockmanagement.utils.LogoStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.DetailsDTO;
 import com.gst.billingandstockmanagement.entities.Details;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.DetailsRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,40 +24,54 @@ public class DetailsServiceImpl implements DetailsService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private LogoStorageService logoStorageService;
+
+
+    @Value("${branding.default-logo-url}")
+    private String defaultLogoUrl;
+
     @Override
-    public DetailsDTO createDetails(DetailsDTO detailsDTO) {
+    public DetailsDTO createDetails(Long userId, DetailsDTO detailsDTO, MultipartFile logo) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Details details = new Details();
-        Optional<User> optionalUser = userRepository.findById(detailsDTO.getUserId());
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            details.setUser(user);
-            mapDetailsDTOToDetails(detailsDTO, details);
-            Details savedDetails = detailsRepository.save(details);
-            return mapDetailsToDetailsDTO(savedDetails);
-        } else {
-            throw new RuntimeException("User not found");
-        }
+        details.setUser(user);
+
+        mapDetailsDTOToDetails(detailsDTO, details);
+
+        String logoUrl = logoStorageService.uploadLogo(logo, userId);
+        details.setLogoUrl(logoUrl);
+
+        Details savedDetails = detailsRepository.save(details);
+        return mapDetailsToDetailsDTO(savedDetails);
     }
 
     @Override
-    public DetailsDTO updateDetails(Long userId, DetailsDTO detailsDTO) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            Details details = user.getDetails();
+    public DetailsDTO updateDetails(Long userId, DetailsDTO detailsDTO, MultipartFile logo) {
 
-            if (details == null) {
-                details = new Details();
-                details.setUser(user);
-            }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-            mapDetailsDTOToDetails(detailsDTO, details);
-            user.setDetails(details);
-            userRepository.save(user);
-            return mapDetailsToDetailsDTO(details);
-        } else {
-            throw new RuntimeException("User not found");
+        Details details = user.getDetails();
+        if (details == null) {
+            details = new Details();
+            details.setUser(user);
         }
+
+        mapDetailsDTOToDetails(detailsDTO, details);
+
+        if (logo != null && !logo.isEmpty()) {
+            String logoUrl = logoStorageService.uploadLogo(logo, userId);
+            details.setLogoUrl(logoUrl);
+        } else if (details.getLogoUrl() == null) {
+            details.setLogoUrl(defaultLogoUrl);
+        }
+
+        detailsRepository.save(details);
+        return mapDetailsToDetailsDTO(details);
     }
 
     @Override
@@ -111,31 +128,28 @@ public class DetailsServiceImpl implements DetailsService {
         details.setBankName(detailsDTO.getBankName());
         details.setAccountNumber(detailsDTO.getAccountNumber());
         details.setIfscCode(detailsDTO.getIfscCode());
+        details.setLogoUrl(detailsDTO.getLogoUrl());
     }
 
     private DetailsDTO mapDetailsToDetailsDTO(Details details) {
-        DetailsDTO detailsDTO = new DetailsDTO();
-        detailsDTO.setUserId(details.getUser().getId());
-        mapDetailsToDetailsDTO(details, detailsDTO);
-        return detailsDTO;
+        DetailsDTO dto = new DetailsDTO();
+        dto.setUserId(details.getUser().getId());
+        dto.setName(details.getName());
+        dto.setAddressLine1(details.getAddressLine1());
+        dto.setAddressLine2(details.getAddressLine2());
+        dto.setCity(details.getCity());
+        dto.setState(details.getState());
+        dto.setPincode(details.getPincode());
+        dto.setPhoneNumber(details.getPhoneNumber());
+        dto.setDlNo1(details.getDlNo1());
+        dto.setDlNo2(details.getDlNo2());
+        dto.setFssaiReg(details.getFssaiReg());
+        dto.setGstin(details.getGstin());
+        dto.setBankName(details.getBankName());
+        dto.setAccountNumber(details.getAccountNumber());
+        dto.setIfscCode(details.getIfscCode());
+        dto.setLogoUrl(details.getLogoUrl());
+        return dto;
     }
-
-    private void mapDetailsToDetailsDTO(Details details, DetailsDTO detailsDTO) {
-        detailsDTO.setName(details.getName());
-        detailsDTO.setAddressLine1(details.getAddressLine1());
-        detailsDTO.setAddressLine2(details.getAddressLine2());
-        detailsDTO.setCity(details.getCity());
-        detailsDTO.setState(details.getState());
-        detailsDTO.setPincode(details.getPincode());
-        detailsDTO.setPhoneNumber(details.getPhoneNumber());
-        detailsDTO.setDlNo1(details.getDlNo1());
-        detailsDTO.setDlNo2(details.getDlNo2());
-        detailsDTO.setFssaiReg(details.getFssaiReg());
-        detailsDTO.setGstin(details.getGstin());
-        detailsDTO.setBankName(details.getBankName());
-        detailsDTO.setAccountNumber(details.getAccountNumber());
-        detailsDTO.setIfscCode(details.getIfscCode());
-    }
-
 }
 			

@@ -27,3 +27,13 @@ app:
 jwt:
   secret: ${JWT_SECRET}
   refreshExpirationMs: ${JWT_REFRESH_EXPIRATION_MS:1800000}
+
+tebi:
+  endpoint: https://s3.tebi.io
+  bucket: ${TEBI_BUCKET_NAME}
+  access-key: ${TEBI_ACCESS_KEY}
+  secret-key: ${TEBI_SECRET_KEY}
+  region: us-east-1
+
+branding:
+  default-logo-url: https://s3.tebi.io/${TEBI_BUCKET_NAME}/logos/default-gst-medicose.png

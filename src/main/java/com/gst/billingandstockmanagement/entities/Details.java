@@ -29,4 +29,6 @@ public class Details {
     private String bankName;
     private String accountNumber;
     private String ifscCode;
+    @Column(name = "logo_url")
+    private String logoUrl;
 }

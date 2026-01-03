@@ -21,4 +21,5 @@ public class DetailsDTO {
 	    private String bankName;
 	    private String accountNumber;
 	    private String ifscCode;
+		private String logoUrl;
 }
