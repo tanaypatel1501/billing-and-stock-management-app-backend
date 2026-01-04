@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @RestController
@@ -21,16 +22,28 @@ public class HealthCheckController {
         this.healthCheckService = healthCheckService;
     }
 
-    @GetMapping
-    public ResponseEntity<Map<String, String>> checkHealth() {
+    @GetMapping("/server")
+    public ResponseEntity<Map<String, Object>> appServerHealth() {
+        return ResponseEntity.ok()
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                .body(Map.of(
+                        "status", "UP",
+                        "application", "BillingAndStockManagement",
+                        "check_time", LocalDateTime.now().toString()
+                ));
+    }
+
+    @GetMapping("/db-server")
+    public ResponseEntity<Map<String, String>> checkServerAndDBHealth() {
         Map<String, String> healthStatus = healthCheckService.checkHealth();
 
-        // Determine HTTP status based on the service response
-        if ("UP".equals(healthStatus.get("status"))) {
-            return ResponseEntity.ok(healthStatus);
-        } else {
-            // Use 503 Service Unavailable or 500 Internal Server Error for degraded status
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(healthStatus);
-        }
+        ResponseEntity.BodyBuilder responseBuilder =
+                "UP".equals(healthStatus.get("status"))
+                        ? ResponseEntity.ok()
+                        : ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE);
+
+        return responseBuilder
+                .header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+                .body(healthStatus);
     }
 }

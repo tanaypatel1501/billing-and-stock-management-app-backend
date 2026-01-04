@@ -1,5 +1,7 @@
 package com.gst.billingandstockmanagement.services.healthcheck;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate; // Re-import JdbcTemplate
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ public class HealthCheckServiceImpl implements HealthCheckService {
 
     // Dependency to check database connectivity
     private final JdbcTemplate jdbcTemplate;
+    private static final Logger log = LoggerFactory.getLogger(HealthCheckServiceImpl.class);
 
     @Autowired
     // Inject JdbcTemplate instead of HealthCheckRepository
@@ -35,7 +38,7 @@ public class HealthCheckServiceImpl implements HealthCheckService {
         if ("UP".equals(statusMap.get("database_status"))) {
             statusMap.put("status", "UP");
         } else {
-            statusMap.put("status", "DEGRADED");
+            statusMap.put("status", "DOWN");
         }
 
         return statusMap;
@@ -58,7 +61,7 @@ public class HealthCheckServiceImpl implements HealthCheckService {
             return dbMap;
         } catch (Exception e) {
             // Log the exception for debugging purposes
-            System.err.println("Database check failed: " + e.getMessage());
+            log.error("Database health check failed", e);
 
             // Add failure status and error details
             dbMap.put("database_status", "DOWN");
