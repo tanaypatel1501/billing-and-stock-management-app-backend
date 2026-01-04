@@ -1,0 +1,34 @@
+name: Keep Backend Alive
+
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check IST Time Window
+        id: timecheck
+        run: |
+          IST_HOUR=$(TZ=Asia/Kolkata date +%H)
+          IST_MIN=$(TZ=Asia/Kolkata date +%M)
+
+          echo "Current IST time: $IST_HOUR:$IST_MIN"
+
+          # Allowed:
+          # 07:00–23:59 IST
+          # 00:00–01:59 IST
+
+          if [ "$IST_HOUR" -ge 7 ] || [ "$IST_HOUR" -le 1 ]; then
+            echo "run_ping=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_ping=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Ping Health Check Endpoint
+        if: steps.timecheck.outputs.run_ping == 'true'
+        run: |
+          curl -fsS https://billing-and-stock-management-app-backend.onrender.com/health-check
