@@ -15,6 +15,7 @@ import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneId;
 
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,23 @@ public class StockServiceImpl implements StockService {
     
     @Autowired
     UserRepository userRepository;
+
+    @Override
+    public StockDTO getStockById(Long stockId) {
+        Stock stock = stockRepository.findById(stockId)
+                .orElseThrow(() -> new RuntimeException("Stock not found"));
+
+        StockDTO dto = new StockDTO();
+        dto.setId(stock.getId());
+        dto.setUserId(stock.getUser().getId());
+        dto.setProductId(stock.getProduct().getId());
+        dto.setBatchNo(stock.getBatchNo());
+        dto.setExpiryDate(stock.getExpiryDate());
+        dto.setQuantity(stock.getQuantity());
+
+        return dto;
+    }
+
 
     @Override
     public void addStock(StockDTO stockDTO) {
@@ -78,36 +96,38 @@ public class StockServiceImpl implements StockService {
     public List<Stock> getStockByUser(User user) {
         return stockRepository.findByUser(user);
     }
-    
+
     @Override
     public void updateStock(StockDTO stockDTO) {
-        User user = userRepository.findById(stockDTO.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
-        Product product = productRepository.findById(stockDTO.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Check if the user already has the same product in their stock
-        Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), stockDTO.getExpiryDate());
+        Stock stock = stockRepository.findById(stockDTO.getId())
+                .orElseThrow(() -> new RuntimeException("Stock not found"));
 
-        if (existingStock != null) {
-            // Convert both dates to LocalDate for comparison
-            LocalDate existingExpiryDate = existingStock.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            LocalDate dtoExpiryDate = stockDTO.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-
-            // Check if batch number and expiry date match
-            if (existingStock.getBatchNo().equals(stockDTO.getBatchNo()) && existingExpiryDate.equals(dtoExpiryDate)) {
-                if (stockDTO.getQuantity() == 0) {
-                    // If the quantity is 0, delete the stock
-                    stockRepository.delete(existingStock);
-                } else {
-                    // Otherwise, update the quantity
-                    existingStock.setQuantity(stockDTO.getQuantity());
-                    stockRepository.save(existingStock);
-                }
-            } else {
-                throw new RuntimeException("Batch number or expiry date does not match.");
-            }
-        } else {
-            throw new RuntimeException("Stock not found");
+        if (!stock.getUser().getId().equals(stockDTO.getUserId())) {
+            throw new RuntimeException("Unauthorized stock update");
         }
+
+        Product product = productRepository.findById(stockDTO.getProductId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        stock.setProduct(product);
+        stock.setBatchNo(stockDTO.getBatchNo());
+        stock.setExpiryDate(stockDTO.getExpiryDate());
+
+        if (stockDTO.getQuantity() == 0) {
+            stockRepository.delete(stock);
+        } else {
+            stock.setQuantity(stockDTO.getQuantity());
+            stockRepository.save(stock);
+        }
+    }
+
+    @Override
+    public void deleteStock(Long stockId) {
+        if (!stockRepository.existsById(stockId)) {
+            throw new EntityNotFoundException("Stock not found with id: " + stockId);
+        }
+        stockRepository.deleteById(stockId);
     }
 
     @Override
@@ -117,5 +137,7 @@ public class StockServiceImpl implements StockService {
         Pageable pageable = PaginationUtils.getPageable(request);
         return stockRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
+
+
 
 }

@@ -3,6 +3,7 @@ package com.gst.billingandstockmanagement.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -27,7 +28,18 @@ public class StockController {
     private StockService stockService;
     
     @Autowired
-    private UserService userService; 
+    private UserService userService;
+
+    @GetMapping("/{stockId}")
+    public ResponseEntity<StockDTO> getStockById(@PathVariable Long stockId) {
+        return ResponseEntity.ok(stockService.getStockById(stockId));
+    }
+
+    @DeleteMapping("/{stockId}")
+    public ResponseEntity<StockDTO> deleteStockById(@PathVariable Long stockId) {
+        stockService.deleteStock(stockId);
+        return ResponseEntity.noContent().build();
+    }
 
     @PostMapping("/add")
     public void addStock(@RequestBody StockDTO stockDTO) {

@@ -9,6 +9,9 @@ import org.springframework.data.domain.Page;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
 
 public interface StockService {
+
+    StockDTO getStockById(Long stockId);
+
     void addStock(StockDTO stockDTO);
     
     List<Stock> getStockByUser(User user);
@@ -16,4 +19,6 @@ public interface StockService {
 	void updateStock(StockDTO stockDTO);
 
 	Page<Stock> searchWithPagination(SearchRequest request);
+
+    void deleteStock(Long stockId);
 }
