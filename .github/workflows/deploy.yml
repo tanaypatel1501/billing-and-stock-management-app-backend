@@ -32,9 +32,10 @@ jobs:
             sudo docker run -d \
               --name billing-backend \
               -p 127.0.0.1:8080:8080 \
+              --env-file .env \
               --restart always \
               -e "JAVA_OPTS=-Xmx512m -Xms256m" \
               billing-app
             
-            # Optional: Reload Nginx just in case
+            # Reload Nginx to ensure it points to the fresh container
             sudo systemctl reload nginx
