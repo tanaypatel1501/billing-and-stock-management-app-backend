@@ -15,15 +15,26 @@ jobs:
           username: opc
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
+            # Navigate to directory
             cd ~/billing-and-stock-management-app-backend
+            
+            # Update code
             git pull origin master
-            docker build -t billing-app .
-            docker stop billing-backend || true
-            docker rm billing-backend || true
-            docker run -d \
+            
+            # Build new image
+            sudo docker build -t billing-app .
+            
+            # Stop and remove old container
+            sudo docker stop billing-backend || true
+            sudo docker rm billing-backend || true
+            
+            # Run new container with memory limits
+            sudo docker run -d \
               --name billing-backend \
-              -p 8080:8080 \
-              --env-file .env \
+              -p 127.0.0.1:8080:8080 \
               --restart always \
               -e "JAVA_OPTS=-Xmx512m -Xms256m" \
               billing-app
+            
+            # Optional: Reload Nginx just in case
+            sudo systemctl reload nginx
