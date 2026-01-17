@@ -34,8 +34,32 @@ jobs:
               -p 127.0.0.1:8080:8080 \
               --env-file .env \
               --restart always \
-              -e "JAVA_OPTS=-Xmx512m -Xms256m" \
+              -e "JAVA_OPTS=-Xmx300m -Xms128m" \
               billing-app
             
             # Reload Nginx to ensure it points to the fresh container
             sudo systemctl reload nginx
+            
+            # --- Professional Health Check ---
+            echo "Deployment successful. Waiting for Spring Boot to start..."
+            echo "Waiting 60 seconds for JVM warm-up..."
+            sleep 60
+            echo "Grace period over. Checking health at /health-check/server..."
+
+            attempt_counter=0
+            max_attempts=20 #(Spring Boot can be slow on AMD Micro)
+
+            until $(curl --output /dev/null --silent --head --fail http://127.0.0.1:8080/health-check/server); do
+                if [ ${attempt_counter} -eq ${max_attempts} ]; then
+                  echo "ERROR: Backend failed to become healthy in time."
+                  echo "Printing last 50 lines of container logs for debugging:"
+                  sudo docker logs --tail 50 billing-backend
+                  exit 1
+                fi
+
+                printf '.'
+                attempt_counter=$(($attempt_counter+1))
+                sleep 5
+            done
+
+            echo "SUCCESS: Spring Boot is UP and reachable at /health-check/server"
