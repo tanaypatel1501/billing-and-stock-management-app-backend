@@ -195,7 +195,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                         "<p style='margin:0 0 10px; font-size:13px; color:#666;'>" +
                         "Need help? Contact us at " +
                         "<a href='mailto:gstmedicose+support@gmail.com' " +
-                        "style='color:#48e3cc; text-decoration:none; font-weight:600'>gstmedicose.support@gmail.com</a>" +
+                        "style='color:#48e3cc; text-decoration:none; font-weight:600'>gstmedicose+support@gmail.com</a>" +
                         "</p>" +
 
                         "<p style='margin:0; font-size:12px; color:#bbb;'>" +
