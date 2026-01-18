@@ -21,12 +21,14 @@ jobs:
             # Update code
             git pull origin master
             
-            # Build new image
-            sudo docker build -t billing-app .
-            
             # Stop and remove old container
+            echo "Stopping old container to free up RAM for build..."
             sudo docker stop billing-backend || true
             sudo docker rm billing-backend || true
+            
+            # Build new image
+            echo "Building new image..."
+            sudo docker build -t billing-app .
             
             # Run new container with memory limits
             sudo docker run -d \
@@ -34,13 +36,15 @@ jobs:
               -p 127.0.0.1:8080:8080 \
               --env-file .env \
               --restart always \
-              -e "JAVA_OPTS=-Xmx300m -Xms128m" \
+              -e "JAVA_OPTS=-Xmx256m -Xms128m -XX:MaxDirectMemorySize=64m" \
               billing-app
             
             # Reload Nginx to ensure it points to the fresh container
             sudo systemctl reload nginx
             
-            # --- Professional Health Check ---
+            sudo docker image prune -f
+            
+            # --- Health Check ---
             echo "Deployment successful. Waiting for Spring Boot to start..."
             echo "Waiting 60 seconds for JVM warm-up..."
             sleep 60
