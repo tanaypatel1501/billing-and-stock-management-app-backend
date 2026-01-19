@@ -36,7 +36,7 @@ jobs:
               -p 127.0.0.1:8080:8080 \
               --env-file .env \
               --restart always \
-              -e "JAVA_OPTS=-Xmx256m -Xms128m -XX:MaxDirectMemorySize=64m" \
+              -e "JAVA_OPTS=-Xmx200m -Xms128m -XX:+UseSerialGC -XX:MaxDirectMemorySize=32m -Xss256k" \
               billing-app
             
             # Reload Nginx to ensure it points to the fresh container
