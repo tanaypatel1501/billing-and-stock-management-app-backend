@@ -38,7 +38,7 @@ jobs:
             # 5. Run with the "3-Hour Freeze" Fix (SerialGC + RAM limits)
             sudo docker run -d \
               --name billing-backend \
-              -p 127.0.0.1:8080:8080 \
+              -p 8080:8080 \
               --env-file .env \
               --restart always \
               -e "JAVA_OPTS=-Xmx220m -Xms128m -XX:+UseSerialGC -XX:MaxDirectMemorySize=32m -Xss256k" \
