@@ -41,6 +41,8 @@ jobs:
               -p 8080:8080 \
               --env-file .env \
               --restart always \
+              --cpus=".40" \
+              --memory="400m" \
               -e "JAVA_OPTS=-Xmx220m -Xms128m -XX:+UseSerialGC -XX:MaxDirectMemorySize=32m -Xss256k" \
               --log-opt max-size=10m --log-opt max-file=3 \
               billing-app
