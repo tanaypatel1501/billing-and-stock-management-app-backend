@@ -20,6 +20,10 @@ jobs:
           username: opc
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
+            # 0. Ensure Docker is running
+            sudo systemctl start docker
+            sudo systemctl enable docker
+            
             # 1. Navigate to directory
             cd ~/billing-and-stock-management-app-backend
             
