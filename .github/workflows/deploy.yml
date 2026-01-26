@@ -21,11 +21,12 @@ jobs:
           max_retries=60
           wait_seconds=10
           success=false
+          RENDER_URL="${{ secrets.RENDER_BACKUP_URL }}"
           
           for i in $(seq 1 $max_retries); do
             # Ping Render health check
             # We use -L to follow redirects and -k if needed
-            status_code=$(curl -s -o /dev/null -w "%{http_code}" https://billing-and-stock-management-app-backend.onrender.com/health-check/server)
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_URL")
           
             if [ "$status_code" -eq 200 ]; then
               echo "Render is UP and Healthy! Proceeding to VM2 deployment."
@@ -47,6 +48,7 @@ jobs:
           host: ${{ secrets.OCI_HOST_VM2 }}
           username: opc
           key: ${{ secrets.OCI_SSH_KEY }}
+          envs: RENDER_BACKUP_URL
           script: |
             # 0. Ensure Docker is running
             sudo systemctl start docker
@@ -74,7 +76,9 @@ jobs:
               --env-file .env \
               --restart always \
               --cpus="0.7" \
-              --memory="400m" \
+              --memory="450m" \
+              -e "IS_PRIMARY_SERVER=true" \
+              -e "RENDER_BACKUP_URL=${{ secrets.RENDER_BACKUP_URL }}" \
               -e "JAVA_OPTS=-Xmx220m -Xms128m -XX:+UseSerialGC -XX:MaxDirectMemorySize=32m -Xss256k" \
               --log-opt max-size=10m --log-opt max-file=3 \
               billing-app

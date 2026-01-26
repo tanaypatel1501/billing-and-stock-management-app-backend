@@ -18,6 +18,9 @@ public class RenderWakeupFilter implements Filter {
     @Value("${RENDER_BACKUP_URL:}")
     private String renderBackupUrl;
 
+    @Value("${IS_PRIMARY_SERVER:false}")
+    private boolean isPrimaryServer;
+
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     @Override
@@ -31,7 +34,9 @@ public class RenderWakeupFilter implements Filter {
         String path = httpRequest.getRequestURI();
 
         // Check if URL is configured and if the path is an API call
-        if (renderBackupUrl != null && !renderBackupUrl.isEmpty() &&
+        if (isPrimaryServer &&
+                renderBackupUrl != null && !renderBackupUrl.isEmpty() &&
+                !path.contains("health-check") &&
                 (path.contains("/api/") || path.contains("/authenticate"))) {
 
             executorService.submit(() -> {
@@ -41,9 +46,9 @@ public class RenderWakeupFilter implements Filter {
                     connection.setConnectTimeout(2000);
                     connection.setReadTimeout(2000);
                     connection.connect();
-                    connection.getResponseCode(); // Triggers the wake-up call
+                    connection.getResponseCode();
                 } catch (Exception e) {
-                    // Fail silently to keep primary VM stable
+                    // Fail silently
                 }
             });
         }
