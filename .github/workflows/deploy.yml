@@ -1,4 +1,4 @@
-name: Deploy to Oracle Cloud
+name: Deploy Backend
 
 on:
   push:
@@ -7,97 +7,67 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 1
-      matrix:
-        server_alias: [ "VM2" ]
 
     steps:
-      - name: Wait for Render Deployment to be Ready
+      # ── Step 1: Wait for Render to finish its auto-deploy ──
+      - name: Wait for Render to be healthy
         run: |
           echo "Waiting for Render to finish its auto-deploy..."
-          sleep 300
-          # 600 seconds = 10 minutes max wait time
-          max_retries=60
-          wait_seconds=10
+          sleep 60
+          max_retries=30
+          wait_seconds=15
           success=false
-          RENDER_URL="${{ secrets.RENDER_BACKUP_URL }}"
-          
+
           for i in $(seq 1 $max_retries); do
-            # Ping Render health check
-            # We use -L to follow redirects and -k if needed
-            status_code=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_URL")
-          
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_BACKUP_URL }}/health-check/server")
+
             if [ "$status_code" -eq 200 ]; then
-              echo "Render is UP and Healthy! Proceeding to VM2 deployment."
+              echo "Render is healthy! Proceeding to Koyeb deployment."
               success=true
               break
             fi
-          
-            echo "Attempt $i: Render is still deploying (Status: $status_code). Waiting ${wait_seconds}s..."
+
+            echo "Attempt $i: Render not ready yet (Status: $status_code). Waiting ${wait_seconds}s..."
             sleep $wait_seconds
           done
-          
+
           if [ "$success" = false ]; then
-            echo "ERROR: Render did not come up within 10 minutes. Aborting VM2 deploy to prevent total downtime."
+            echo "ERROR: Render did not come up in time. Aborting to prevent total downtime."
             exit 1
           fi
-      - name: Deploy to ${{ matrix.server_alias }} via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.OCI_HOST_VM2 }}
-          username: opc
-          key: ${{ secrets.OCI_SSH_KEY }}
-          envs: RENDER_BACKUP_URL
-          script: |
-            # 0. Ensure Docker is running
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            
-            # 1. Navigate to directory
-            cd ~/billing-and-stock-management-app-backend
-            
-            # 2. Update code
-            echo "Pulling latest code on ${{ matrix.server_alias }}..."
-            git pull origin master
-            
-            # 3. Build with LOW PRIORITY (Prevents the 1-core CPU from freezing)
-            echo "Building Docker image..."
-            sudo DOCKER_BUILDKIT=0 nice -n 19 docker build -t billing-app .
-            
-            # 4. Stop and remove old container
-            sudo docker stop billing-backend || true
-            sudo docker rm billing-backend || true
-            
-            # 5. Run with the "3-Hour Freeze" Fix (SerialGC + RAM limits)
-            sudo docker run -d \
-              --name billing-backend \
-              -p 8080:8080 \
-              --env-file .env \
-              --restart always \
-              --cpus="0.7" \
-              --memory="450m" \
-              -e "IS_PRIMARY_SERVER=true" \
-              -e "RENDER_BACKUP_URL=${{ secrets.RENDER_BACKUP_URL }}" \
-              -e "JAVA_OPTS=-Xmx220m -Xms128m -XX:+UseSerialGC -XX:MaxDirectMemorySize=32m -Xss256k" \
-              --log-opt max-size=10m --log-opt max-file=3 \
-              billing-app
-            
-            sudo docker image prune -f
-            
-            # 7. --- Detailed Health Check ---
-            echo "Waiting for Spring Boot to start..."
-            attempt_counter=0
-            max_attempts=30 
 
-            until $(curl --output /dev/null --silent --head --fail http://127.0.0.1:8080/health-check/server); do
-                if [ ${attempt_counter} -eq ${max_attempts} ]; then
-                  echo "ERROR: Backend failed on ${{ matrix.server_alias }}."
-                  sudo docker logs --tail 50 billing-backend
-                  exit 1
-                fi
-                printf '.'
-                attempt_counter=$(($attempt_counter+1))
-                sleep 5
-            done
-            echo "SUCCESS: ${{ matrix.server_alias }} is UP and ACTIVE."
+      # ── Step 2: Trigger Koyeb redeploy ──
+      - name: Trigger Koyeb redeploy
+        run: |
+          curl -s -X POST \
+            -H "Authorization: Bearer ${{ secrets.KOYEB_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://app.koyeb.com/v1/services/${{ secrets.KOYEB_SERVICE_ID }}/redeploy"
+          echo "Koyeb redeploy triggered."
+
+      # ── Step 3: Wait for Koyeb to be healthy ──
+      - name: Wait for Koyeb to be healthy
+        run: |
+          echo "Waiting for Koyeb to come back up..."
+          sleep 30
+          max_retries=24
+          wait_seconds=15
+          success=false
+
+          for i in $(seq 1 $max_retries); do
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.KOYEB_BACKEND_URL }}/health-check/server")
+
+            if [ "$status_code" -eq 200 ]; then
+              echo "Koyeb is healthy! Full deployment complete."
+              success=true
+              break
+            fi
+
+            echo "Attempt $i: Koyeb not ready yet (Status: $status_code). Waiting ${wait_seconds}s..."
+            sleep $wait_seconds
+          done
+
+          if [ "$success" = false ]; then
+            echo "WARNING: Koyeb health check timed out. Check Koyeb dashboard."
+            exit 1
+          fi

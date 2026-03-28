@@ -2,55 +2,32 @@ package com.gst.billingandstockmanagement.configuration;
 
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
+@Order(1)
 public class RenderWakeupFilter implements Filter {
 
-    // Pull the URL from the environment variable we just created
-    @Value("${RENDER_BACKUP_URL:}")
-    private String renderBackupUrl;
+    @Autowired
+    private RenderWarmupService renderWarmupService;
 
-    @Value("${IS_PRIMARY_SERVER:false}")
-    private boolean isPrimaryServer;
-
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean firstRequest = new AtomicBoolean(true);
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
 
-        // Process the request immediately so the user isn't delayed
-        chain.doFilter(request, response);
-
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        String path = httpRequest.getRequestURI();
-
-        // Check if URL is configured and if the path is an API call
-        if (isPrimaryServer &&
-                renderBackupUrl != null && !renderBackupUrl.isEmpty() &&
-                !path.contains("health-check") &&
-                (path.contains("/api/") || path.contains("/authenticate"))) {
-
-            executorService.submit(() -> {
-                try {
-                    HttpURLConnection connection = (HttpURLConnection) new URL(renderBackupUrl).openConnection();
-                    connection.setRequestMethod("GET");
-                    connection.setConnectTimeout(2000);
-                    connection.setReadTimeout(2000);
-                    connection.connect();
-                    connection.getResponseCode();
-                } catch (Exception e) {
-                    // Fail silently
-                }
-            });
+        if (firstRequest.compareAndSet(true, false)) {
+            // First request after startup — trigger warmup asynchronously
+            renderWarmupService.triggerWarmup();
         }
+
+        // Never blocks the actual request
+        chain.doFilter(request, response);
     }
 }
