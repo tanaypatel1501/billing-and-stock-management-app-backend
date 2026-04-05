@@ -66,4 +66,12 @@ public class BillController {
         Page<Bill> p = billService.searchWithPagination(request);
         return ResponseEntity.ok(p);
     }
+
+    @PatchMapping("/{billId}/paid")
+    public ResponseEntity<Void> updatePaidStatus(
+            @PathVariable Long billId,
+            @RequestParam boolean paid) {
+        billService.updatePaidStatus(billId, paid);
+        return ResponseEntity.ok().build();
+    }
 }

@@ -44,6 +44,7 @@ public class BillServiceImpl implements BillService {
         bill.setDl2(billDTO.getDl2());
         bill.setGstin(billDTO.getGstin());
         bill.setInvoiceDate(billDTO.getInvoiceDate());
+        bill.setPaid(billDTO.isPaid());
 
         // Save the Bill entity using billRepository
         Bill savedBill = billRepository.save(bill);
@@ -124,6 +125,7 @@ public class BillServiceImpl implements BillService {
         billDTO.setGstin(bill.getGstin());
         billDTO.setInvoiceDate(bill.getInvoiceDate());
         billDTO.setTotalAmount(bill.getTotalAmount());
+        billDTO.setPaid(bill.isPaid());
 
         // Map bill items to DTOs using snapshot fields
         if (bill.getBillItems() != null) {
@@ -182,4 +184,11 @@ public class BillServiceImpl implements BillService {
         return billRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
 
+    @Override
+    public void updatePaidStatus(Long billId, boolean paid) {
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new RuntimeException("Bill not found: " + billId));
+        bill.setPaid(paid);
+        billRepository.save(bill);
+    }
 }

@@ -15,6 +15,7 @@ public class BillDTO {
     private Date invoiceDate;
 
     private Double totalAmount;
+    private boolean paid;
 
     private List<BillItemsDTO> billItems;
 }

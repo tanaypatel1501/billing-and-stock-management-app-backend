@@ -21,4 +21,6 @@ public interface BillService {
 	void deleteBill(Long billId);
 
 	Page<Bill> searchWithPagination(SearchRequest request);
+
+	void updatePaidStatus(Long billId, boolean paid);
 }
