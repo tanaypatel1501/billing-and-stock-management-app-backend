@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name="detials")
+@Table(name = "details")
 @Data
 public class Details {
 	@Id
@@ -31,4 +31,8 @@ public class Details {
     private String ifscCode;
     @Column(name = "logo_url")
     private String logoUrl;
+    @Column(name = "upi_id")
+    private String upiId;
+    @Column(name = "show_qr_on_bill", nullable = false, columnDefinition = "boolean default false")
+    private boolean showQrOnBill = false;
 }

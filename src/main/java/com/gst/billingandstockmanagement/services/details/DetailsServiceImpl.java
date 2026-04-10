@@ -129,6 +129,8 @@ public class DetailsServiceImpl implements DetailsService {
         details.setAccountNumber(detailsDTO.getAccountNumber());
         details.setIfscCode(detailsDTO.getIfscCode());
         details.setLogoUrl(detailsDTO.getLogoUrl());
+        details.setUpiId(detailsDTO.getUpiId());
+        details.setShowQrOnBill(detailsDTO.isShowQrOnBill());
     }
 
     private DetailsDTO mapDetailsToDetailsDTO(Details details) {
@@ -149,6 +151,8 @@ public class DetailsServiceImpl implements DetailsService {
         dto.setAccountNumber(details.getAccountNumber());
         dto.setIfscCode(details.getIfscCode());
         dto.setLogoUrl(details.getLogoUrl());
+        dto.setUpiId(details.getUpiId());
+        dto.setShowQrOnBill(details.isShowQrOnBill());
         return dto;
     }
 }

@@ -22,4 +22,6 @@ public class DetailsDTO {
 	    private String accountNumber;
 	    private String ifscCode;
 		private String logoUrl;
+		private String upiId;
+		private boolean showQrOnBill;
 }
