@@ -2,6 +2,8 @@ package com.gst.billingandstockmanagement.services.billItems;
 
 import java.util.Optional;
 
+import com.gst.billingandstockmanagement.entities.Stock;
+import com.gst.billingandstockmanagement.repository.StockRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,6 +27,9 @@ public class BillItemsServiceImpl implements BillItemsService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private StockRepository stockRepository;
 
     @Autowired
     private BillService billService; // Inject the BillService
@@ -72,8 +77,20 @@ public class BillItemsServiceImpl implements BillItemsService {
 
         // Populate snapshot fields from current Product (for creates and updates if product present)
         if (product != null) {
+            Double effectiveMrp = product.getMRP();
+            if (billItemsDTO.getBatchNo() != null && bill != null && bill.getUser() != null) {
+                Stock matchingStock = stockRepository
+                        .findByUserAndProductAndBatchNoAndExpiryDate(
+                                bill.getUser(), product,
+                                billItemsDTO.getBatchNo(),
+                                billItemsDTO.getExpiryDate()
+                        );
+                if (matchingStock != null && matchingStock.getMrp() != null) {
+                    effectiveMrp = matchingStock.getMrp();
+                }
+            }
             billItems.setSnapshotProductName(product.getName());
-            billItems.setSnapshotUnitPrice(product.getMRP());
+            billItems.setSnapshotUnitPrice(effectiveMrp);
             billItems.setSnapshotPacking(product.getPacking());
             billItems.setSnapshotHsn(product.getHSN());
             billItems.setSnapshotCgst(product.getCGST());

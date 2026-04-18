@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -34,5 +35,7 @@ public class Stock {
 	private int quantity;
 	private String batchNo;
 	private Date expiryDate;
+	@Column(nullable = true)
+	private Double mrp;
 
 }

@@ -12,4 +12,5 @@ public class StockDTO {
 	private int quantity;
 	private String batchNo;
 	private Date expiryDate;
+	private Double mrp;
 }

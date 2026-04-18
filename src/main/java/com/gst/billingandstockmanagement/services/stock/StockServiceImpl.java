@@ -44,6 +44,7 @@ public class StockServiceImpl implements StockService {
         dto.setBatchNo(stock.getBatchNo());
         dto.setExpiryDate(stock.getExpiryDate());
         dto.setQuantity(stock.getQuantity());
+        dto.setMrp(stock.getMrp());
 
         return dto;
     }
@@ -68,6 +69,9 @@ public class StockServiceImpl implements StockService {
                 // If the batch number and expiry date match, update the quantity
                 int newQuantity = existingStock.getQuantity() + stockDTO.getQuantity();
                 existingStock.setQuantity(newQuantity);
+                if (stockDTO.getMrp() != null) {
+                    existingStock.setMrp(stockDTO.getMrp());
+                }
                 stockRepository.save(existingStock);
             } else {
                 // If the batch number or expiry date is different, create a new stock entry
@@ -77,6 +81,7 @@ public class StockServiceImpl implements StockService {
                 stock.setQuantity(stockDTO.getQuantity());
                 stock.setBatchNo(stockDTO.getBatchNo());
                 stock.setExpiryDate(stockDTO.getExpiryDate());
+                stock.setMrp(stockDTO.getMrp());
                 stockRepository.save(stock);
             }
         } else {
@@ -87,6 +92,7 @@ public class StockServiceImpl implements StockService {
             stock.setQuantity(stockDTO.getQuantity());
             stock.setBatchNo(stockDTO.getBatchNo());
             stock.setExpiryDate(stockDTO.getExpiryDate());
+            stock.setMrp(stockDTO.getMrp());
             stockRepository.save(stock);
         }
     }
@@ -113,6 +119,9 @@ public class StockServiceImpl implements StockService {
         stock.setProduct(product);
         stock.setBatchNo(stockDTO.getBatchNo());
         stock.setExpiryDate(stockDTO.getExpiryDate());
+        if (stockDTO.getMrp() != null) {
+            stock.setMrp(stockDTO.getMrp());
+        }
 
         if (stockDTO.getQuantity() == 0) {
             stockRepository.delete(stock);
