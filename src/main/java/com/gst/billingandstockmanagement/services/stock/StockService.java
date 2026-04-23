@@ -21,4 +21,6 @@ public interface StockService {
 	Page<Stock> searchWithPagination(SearchRequest request);
 
     void deleteStock(Long stockId);
+
+    void sendExpiryAlerts();
 }

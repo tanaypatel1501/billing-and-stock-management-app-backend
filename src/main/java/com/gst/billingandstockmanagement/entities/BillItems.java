@@ -6,44 +6,44 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"bill", "product"})
 @Entity
-@Table(name="bill_items")
-@Data
+@Table(name = "bill_items")
 public class BillItems {
 
-	@Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
     private Long id;
-	
-	@ManyToOne(cascade = CascadeType.REMOVE)
+
+    @ManyToOne
     @JoinColumn(name = "bill_id")
-	@JsonBackReference // Prevent circular reference
+    @JsonBackReference
     private Bill bill;
-	
-	@ManyToOne(cascade = CascadeType.REMOVE)
+
+    @ManyToOne
     @JoinColumn(name = "product_id")
-	@JsonIgnore // Do not serialize the live Product (use snapshots instead)
+    @JsonIgnore
     private Product product;
-	
-	// Snapshot fields: copy current product details at the time of billing
-	@Column(name = "snapshot_product_name")
-	private String snapshotProductName;
-	@Column(name = "snapshot_unit_price")
-	private Double snapshotUnitPrice;
-    @Column(name= "snapshot_packing")
+
+    private String snapshotProductName;
+    private Double snapshotUnitPrice;
     private String snapshotPacking;
-    @Column(name = "snapshot_hsn")
     private String snapshotHsn;
-    @Column(name = "snapshot_cgst")
     private Double snapshotCgst;
-    @Column(name = "snapshot_sgst")
     private Double snapshotSgst;
 
-	private String batchNo;
-	private int quantity;
-	private int free;
+    private String batchNo;
+    private int quantity;
+    private int free;
     private Double rate;
     private Date expiryDate;
     private Double amount;
