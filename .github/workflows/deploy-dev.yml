@@ -1,0 +1,65 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [ dev ]
+
+jobs:
+  # ── Job 1: Wait for Render to finish its auto-deploy ──
+  deploy-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Render to be healthy
+        env:
+          RENDER_DEV_URL: ${{ secrets.RENDER_DEV_URL }}
+        run: |
+          echo "Waiting for Render dev to finish auto-deploy..."
+          sleep 60
+          max_retries=30
+          wait_seconds=15
+          success=false
+
+          for i in $(seq 1 $max_retries); do
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "$RENDER_DEV_URL/health-check/server")
+
+            if [ "$status_code" -eq 200 ]; then
+              echo "Render dev is healthy!"
+              success=true
+              break
+            fi
+
+            echo "Attempt $i: not ready (Status: $status_code). Waiting ${wait_seconds}s..."
+            sleep $wait_seconds
+          done
+
+          if [ "$success" = false ]; then
+            echo "ERROR: Render dev did not come up in time."
+            exit 1
+          fi
+
+  # ── Job 2: Deploy to dev OCI VM (only after Render is healthy) ──
+  deploy-oci-dev:
+    runs-on: ubuntu-latest
+    needs: deploy-render
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH and redeploy on OCI dev
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_DEV_HOST }}
+          username: ubuntu
+          key: ${{ secrets.OCI_DEV_SSH_KEY }}
+          script: |
+            cd ~/billing-and-stock-management-app-backend
+            git pull origin dev
+            docker build -t gst-backend-dev .
+            docker stop gstm-backend-dev || true
+            docker rm gstm-backend-dev || true
+            docker run -d \
+              --name gstm-backend-dev \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              --env-file .env \
+              gst-backend-dev
