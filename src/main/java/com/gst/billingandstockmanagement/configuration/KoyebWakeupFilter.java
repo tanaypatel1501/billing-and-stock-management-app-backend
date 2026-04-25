@@ -1,7 +1,6 @@
 package com.gst.billingandstockmanagement.configuration;
 
 import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -11,10 +10,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 @Order(1)
-public class RenderWakeupFilter implements Filter {
+public class KoyebWakeupFilter implements Filter {
 
     @Autowired
-    private RenderWarmupService renderWarmupService;
+    private KoyebWarmupService renderWarmupService;
 
     private final AtomicBoolean firstRequest = new AtomicBoolean(true);
 

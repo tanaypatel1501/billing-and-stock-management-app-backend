@@ -14,12 +14,12 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 @Service
-public class RenderWarmupService {
+public class KoyebWarmupService {
 
-    private static final Logger log = LoggerFactory.getLogger(RenderWarmupService.class);
+    private static final Logger log = LoggerFactory.getLogger(KoyebWarmupService.class);
 
-    @Value("${RENDER_BACKUP_URL:}")
-    private String renderBackupUrl;
+    @Value("${KOYEB_BACKUP_URL:}")
+    private String koyebBackupUrl;
 
     public enum WarmState { COLD, WARMING, WARM }
 
@@ -34,17 +34,17 @@ public class RenderWarmupService {
     }
 
     public synchronized void triggerWarmup() {
-        if (state != WarmState.COLD) return; // already warming or warm
-        if (renderBackupUrl == null || renderBackupUrl.isEmpty()) return; // not configured
+        if (state != WarmState.COLD) return;
+        if (koyebBackupUrl == null || koyebBackupUrl.isEmpty()) return;
 
         state = WarmState.WARMING;
-        log.info("Triggering Render warmup...");
+        log.info("Triggering Koyeb warmup...");
 
         CompletableFuture.runAsync(() -> {
-            for (int i = 0; i < 30; i++) { // poll every 10s for max 5 mins
+            for (int i = 0; i < 30; i++) {
                 try {
                     HttpRequest request = HttpRequest.newBuilder()
-                            .uri(URI.create(renderBackupUrl + "/health-check/server"))
+                            .uri(URI.create(koyebBackupUrl + "/health-check/server"))
                             .timeout(Duration.ofSeconds(5))
                             .GET()
                             .build();
@@ -54,7 +54,7 @@ public class RenderWarmupService {
 
                     if (response.statusCode() == 200) {
                         state = WarmState.WARM;
-                        log.info("Render is warm and ready.");
+                        log.info("Koyeb is warm and ready.");
                         return;
                     }
                 } catch (Exception ignored) {}
@@ -62,9 +62,8 @@ public class RenderWarmupService {
                 try { Thread.sleep(10_000); } catch (InterruptedException ignored) {}
             }
 
-            // Timed out — reset so it retries on next startup
             state = WarmState.COLD;
-            log.warn("Render warmup timed out, resetting to COLD.");
+            log.warn("Koyeb warmup timed out, resetting to COLD.");
         });
     }
 

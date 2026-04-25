@@ -5,38 +5,10 @@ on:
     branches: [ master ]
 
 jobs:
-  deploy:
+  # ── Job 1: Deploy to Koyeb (failsafe must be ready before OCI redeploys) ──
+  deploy-koyeb:
     runs-on: ubuntu-latest
-
     steps:
-      # ── Step 1: Wait for Render to finish its auto-deploy ──
-      - name: Wait for Render to be healthy
-        run: |
-          echo "Waiting for Render to finish its auto-deploy..."
-          sleep 60
-          max_retries=30
-          wait_seconds=15
-          success=false
-
-          for i in $(seq 1 $max_retries); do
-            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.RENDER_BACKUP_URL }}/health-check/server")
-
-            if [ "$status_code" -eq 200 ]; then
-              echo "Render is healthy! Proceeding to Koyeb deployment."
-              success=true
-              break
-            fi
-
-            echo "Attempt $i: Render not ready yet (Status: $status_code). Waiting ${wait_seconds}s..."
-            sleep $wait_seconds
-          done
-
-          if [ "$success" = false ]; then
-            echo "ERROR: Render did not come up in time. Aborting to prevent total downtime."
-            exit 1
-          fi
-
-      # ── Step 2: Trigger Koyeb redeploy ──
       - name: Trigger Koyeb redeploy
         run: |
           curl -s -X POST \
@@ -45,8 +17,9 @@ jobs:
             "https://app.koyeb.com/v1/services/${{ secrets.KOYEB_SERVICE_ID }}/redeploy"
           echo "Koyeb redeploy triggered."
 
-      # ── Step 3: Wait for Koyeb to be healthy ──
       - name: Wait for Koyeb to be healthy
+        env:
+          KOYEB_BACKEND_URL: ${{ secrets.KOYEB_BACKEND_URL }}
         run: |
           echo "Waiting for Koyeb to come back up..."
           sleep 30
@@ -55,19 +28,46 @@ jobs:
           success=false
 
           for i in $(seq 1 $max_retries); do
-            status_code=$(curl -s -o /dev/null -w "%{http_code}" "${{ secrets.KOYEB_BACKEND_URL }}/health-check/server")
+            status_code=$(curl -s -o /dev/null -w "%{http_code}" "$KOYEB_BACKEND_URL/health-check/server")
 
             if [ "$status_code" -eq 200 ]; then
-              echo "Koyeb is healthy! Full deployment complete."
+              echo "Koyeb is healthy!"
               success=true
               break
             fi
 
-            echo "Attempt $i: Koyeb not ready yet (Status: $status_code). Waiting ${wait_seconds}s..."
+            echo "Attempt $i: not ready (Status: $status_code). Waiting ${wait_seconds}s..."
             sleep $wait_seconds
           done
 
           if [ "$success" = false ]; then
-            echo "WARNING: Koyeb health check timed out. Check Koyeb dashboard."
+            echo "ERROR: Koyeb did not come up in time. Aborting to prevent total downtime."
             exit 1
           fi
+
+  # ── Job 2: Deploy to OCI (only after Koyeb is healthy) ──
+  deploy-oci:
+    runs-on: ubuntu-latest
+    needs: deploy-koyeb
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: SSH and redeploy on OCI
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.OCI_HOST }}
+          username: ubuntu
+          key: ${{ secrets.OCI_SSH_KEY }}
+          script: |
+            cd ~/billing-and-stock-management-app-backend
+            git pull origin master
+            docker build -t gst-backend .
+            docker stop gstm-backend || true
+            docker rm gstm-backend || true
+            docker run -d \
+              --name gstm-backend \
+              --restart unless-stopped \
+              -p 8080:8080 \
+              --env-file .env \
+              gst-backend
