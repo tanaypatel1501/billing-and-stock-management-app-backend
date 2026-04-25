@@ -1,17 +1,17 @@
 server:
-  port: ${PORT:8080}
+  port: ${PORT:3000}
 
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DB_URL:jdbc:mysql://localhost:3306/billing_and_stock_management}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
-      ddl-auto: ${DDL_AUTO:update}
-    show-sql: false
+      ddl-auto: update
+    show-sql: true
 
 gmail:
   client-id: ${GMAIL_CLIENT_ID}
@@ -21,16 +21,17 @@ gmail:
 
 app:
   client:
-    url: ${CLIENT_URL}
+    url: ${CLIENT_URL:http://localhost:4200/}
     reset-password-url: ${RESET_PASSWORD_URL:${app.client.url}/reset-password}
 
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:dev-secret}
   refreshExpirationMs: ${JWT_REFRESH_EXPIRATION_MS:1800000}
 
 logging:
   level:
-    root: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 tebi:
   endpoint: ${TEBI_ENDPOINT}
@@ -41,3 +42,4 @@ tebi:
 
 branding:
   default-logo-url: ${TEBI_ENDPOINT}/${TEBI_BUCKET_NAME}/logos/default-gst-medicose.png
+
