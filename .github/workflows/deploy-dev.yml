@@ -43,10 +43,10 @@ jobs:
     needs: deploy-render
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: SSH and redeploy on OCI dev
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.OCI_DEV_HOST }}
           username: ubuntu
