@@ -42,8 +42,12 @@ public class DetailsServiceImpl implements DetailsService {
 
         mapDetailsDTOToDetails(detailsDTO, details);
 
-        String logoUrl = logoStorageService.uploadLogo(logo, userId);
-        details.setLogoUrl(logoUrl);
+        if (logo != null && !logo.isEmpty()) {
+            String logoUrl = logoStorageService.uploadLogo(logo, userId);
+            details.setLogoUrl(logoUrl);
+        } else {
+            details.setLogoUrl(defaultLogoUrl);
+        }
 
         Details savedDetails = detailsRepository.save(details);
         return mapDetailsToDetailsDTO(savedDetails);
