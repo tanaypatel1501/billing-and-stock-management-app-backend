@@ -97,7 +97,7 @@ public class PdfServiceImpl implements PdfService {
             // Fallback to null so the PDF still generates without the logo
             context.setVariable("logoBase64", null);
         }
-        if (details.getUpiId() != null && !details.getUpiId().isEmpty()) {
+        if (details.getUpiId() != null && !details.getUpiId().isEmpty() && details.isShowQrOnBill()) {
             String upiUrl = String.format("upi://pay?pa=%s&pn=%s&am=%.2f&cu=INR",
                     details.getUpiId(), details.getName().replace(" ", "%20"), bill.getTotalAmount());
             String qrBase64 = qrCodeGenerator.generateQrCodeBase64(upiUrl, 200, 200);
