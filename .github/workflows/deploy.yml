@@ -61,7 +61,8 @@ jobs:
           key: ${{ secrets.OCI_SSH_KEY }}
           script: |
             cd ~/billing-and-stock-management-app-backend
-            git pull origin master
+            git fetch origin
+            git reset --hard origin/master
             docker build -t gst-backend .
             docker stop gstm-backend || true
             docker rm gstm-backend || true

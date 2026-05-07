@@ -53,7 +53,8 @@ jobs:
           key: ${{ secrets.OCI_DEV_SSH_KEY }}
           script: |
             cd ~/billing-and-stock-management-app-backend
-            git pull origin dev
+            git fetch origin
+            git reset --hard origin/dev
             docker build -t gst-backend-dev .
             docker stop gstm-backend-dev || true
             docker rm gstm-backend-dev || true
