@@ -28,16 +28,18 @@ public class LogoController {
     @Value("${tebi.bucket}")
     private String bucketName;
 
+    @Value("${branding.default-logo-url}")
+    private String defaultLogoUrl;
+
     @GetMapping("/logo/{userId}")
     public ResponseEntity<byte[]> getLogo(@PathVariable Long userId,
                                           DetailsRepository detailsRepository) {
         try {
-            Details details = detailsRepository.findByUserId(userId)
-                    .orElseThrow(() -> new RuntimeException("Details not found"));
+            String logoUrl = defaultLogoUrl; // fallback from the start
 
-            String logoUrl = details.getLogoUrl();
-            if (logoUrl == null || logoUrl.isEmpty()) {
-                return ResponseEntity.notFound().build();
+            Details details = detailsRepository.findByUserId(userId).orElse(null);
+            if (details != null && details.getLogoUrl() != null && !details.getLogoUrl().isEmpty()) {
+                logoUrl = details.getLogoUrl();
             }
 
             String cleanKey;
