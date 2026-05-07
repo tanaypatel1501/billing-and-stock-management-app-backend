@@ -350,8 +350,8 @@
                     </div>
                     <div class="info-cell">
                         <th:block th:if="${bill.gstin != null and !bill.gstin.isEmpty()}">
-                            <span class="info-label">GSTIN: </span>
-                            <span th:text="${bill.gstin}"></span>
+                            <span class="info-label" th:text="${purchaserIdLabel + ': '}"></span>
+                            <span th:text="${purchaserIdValue}"></span>
                         </th:block>
                     </div>
                 </div>

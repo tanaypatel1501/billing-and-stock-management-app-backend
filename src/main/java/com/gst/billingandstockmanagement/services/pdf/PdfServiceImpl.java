@@ -62,6 +62,14 @@ public class PdfServiceImpl implements PdfService {
 
         Context context = new Context();
         context.setVariable("bill", bill);
+        String purchaserGstin = bill.getGstin();
+        String idLabel = getIdentificationLabel(purchaserGstin);
+        String idValue = "Aadhaar".equals(idLabel)
+                ? formatAadhaar(purchaserGstin)
+                : purchaserGstin;
+
+        context.setVariable("purchaserIdLabel", idLabel);
+        context.setVariable("purchaserIdValue", idValue);
         context.setVariable("details", details);
         context.setVariable("totalAmountInWords", numberToWordsConverter.convert(bill.getTotalAmount()));
 
@@ -116,5 +124,19 @@ public class PdfServiceImpl implements PdfService {
             renderer.createPDF(outputStream);
             return outputStream.toByteArray();
         }
+    }
+
+    private String getIdentificationLabel(String value) {
+        if (value == null || value.isEmpty()) return "GSTIN";
+        if (value.matches("^[0-9]{12}$")) return "Aadhaar";
+        if (value.matches("^[A-Z]{5}[0-9]{4}[A-Z]$")) return "PAN";
+        return "GSTIN";
+    }
+
+    private String formatAadhaar(String value) {
+        if (value != null && value.matches("^[0-9]{12}$")) {
+            return value.substring(0, 4) + " " + value.substring(4, 8) + " " + value.substring(8, 12);
+        }
+        return value;
     }
 }
