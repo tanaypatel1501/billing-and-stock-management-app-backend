@@ -65,7 +65,8 @@ jobs:
             git reset --hard origin/master
             docker build -t gst-backend .
             docker stop gstm-backend || true
-            docker rm gstm-backend || true
+            docker kill gstm-backend || true
+            docker rm -f gstm-backend || true
             docker run -d \
               --name gstm-backend \
               --restart unless-stopped \
