@@ -391,8 +391,9 @@
                 <th>Free</th>
                 <th>MRP</th>
                 <th>Rate</th>
-                <th>CGST</th>
-                <th>SGST</th>
+                <th th:if="${taxMode == 'IGST'}">IGST</th>
+                <th th:unless="${taxMode == 'IGST'}">CGST</th>
+                <th th:unless="${taxMode == 'IGST'}">SGST</th>
                 <th>Amount</th>
             </tr>
             </thead>
@@ -408,8 +409,11 @@
                 <td th:text="${item.free}"></td>
                 <td th:text="'₹' + ${#numbers.formatDecimal(item.snapshotUnitPrice, 1, 2)}"></td>
                 <td th:text="'₹' + ${#numbers.formatDecimal(item.rate, 1, 2)}"></td>
-                <td th:text="${item.snapshotCgst} + '%'"></td>
-                <td th:text="${item.snapshotSgst} + '%'"></td>
+                <td th:if="${taxMode == 'IGST'}"
+                    th:text="${#numbers.formatDecimal(item.snapshotCgst + item.snapshotSgst, 1, 2)} + '%'">
+                </td>
+                <td th:unless="${taxMode == 'IGST'}" th:text="${item.snapshotCgst} + '%'"></td>
+                <td th:unless="${taxMode == 'IGST'}" th:text="${item.snapshotSgst} + '%'"></td>
                 <td class="amount" th:text="'₹' + ${#numbers.formatDecimal(item.amount, 1, 2)}"></td>
             </tr>
             </tbody>

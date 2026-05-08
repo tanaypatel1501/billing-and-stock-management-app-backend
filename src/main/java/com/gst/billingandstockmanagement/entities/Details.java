@@ -46,4 +46,7 @@ public class Details {
 
     @Column(name = "show_qr_on_bill", nullable = false, columnDefinition = "boolean default false")
     private boolean showQrOnBill = false;
+
+    @Column(name = "tax_mode", nullable = false)
+    private String taxMode = "CGST_SGST";
 }
