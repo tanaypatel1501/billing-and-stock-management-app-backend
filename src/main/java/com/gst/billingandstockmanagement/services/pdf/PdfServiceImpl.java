@@ -114,6 +114,7 @@ public class PdfServiceImpl implements PdfService {
         } else {
             context.setVariable("showQr", false);
         }
+        context.setVariable("taxMode", details.getTaxMode());
 
         String htmlContent = templateEngine.process("invoice-template", context);
 
