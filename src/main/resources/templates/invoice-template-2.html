@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 16px 20px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #000;
+            background: #fff;
+        }
+
+        .page { width: 100%; }
+
+        /* ── HEADER ── */
+        .header-band {
+            background: #1a3c5e;
+            padding: 10px 14px;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border: 1px solid #1a3c5e; /* Aligns header edge with boxes below */
+            border-collapse: collapse;
+        }
+
+        .header-logo-cell {
+            display: table-cell;
+            width: 90px;
+            vertical-align: middle;
+        }
+
+        .header-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 4px;
+            padding: 2px;
+            margin: 5px 0 5px 10px;
+        }
+
+        .header-business-cell {
+            display: table-cell;
+            vertical-align: middle;
+            padding-left: 8px;
+        }
+
+        .header-invoice-cell {
+            display: table-cell;
+            width: 110px;
+            vertical-align: middle;
+            text-align: right;
+        }
+
+        .business-name-header {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        .business-address-header {
+            font-size: 8.5px;
+            color: #b0c4de;
+            line-height: 1.4;
+        }
+
+        .invoice-badge {
+            background: #fff;
+            color: #1a3c5e;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 5px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            letter-spacing: 1px;
+            margin-right: 10px;
+        }
+
+        /* ── INFO STRIP ── */
+        .info-strip {
+            background: #f0f4f8;
+            border: 1px solid #c8d8e8;
+            border-top: none;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+
+        .info-strip-cell {
+            display: table-cell;
+            padding: 7px 12px;
+            font-size: 8.5px;
+            border-right: 1px solid #c8d8e8;
+            vertical-align: top;
+        }
+
+        .info-strip-cell:last-child { border-right: none; }
+
+        .strip-label {
+            font-weight: 700;
+            color: #1a3c5e;
+            display: block;
+            margin-bottom: 1px;
+        }
+
+        /* ── PARTIES SECTION ── */
+        .parties-section {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            border-collapse: collapse;
+        }
+
+        .party-cell {
+            display: table-cell;
+            width: 50%;
+            padding: 8px 10px;
+            vertical-align: top;
+            border-right: 1px solid #000;
+        }
+
+        .party-cell:last-child { border-right: none; }
+
+        .party-title {
+            font-size: 8px;
+            font-weight: 700;
+            color: #1a3c5e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #c8d8e8;
+            padding-bottom: 4px;
+            margin-bottom: 5px;
+        }
+
+        .party-name {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .party-detail-row {
+            display: table;
+            width: 100%;
+            margin-bottom: 2px;
+        }
+
+        .party-detail-label {
+            display: table-cell;
+            font-weight: 700;
+            color: #444;
+            width: 60px;
+            font-size: 8.5px;
+            vertical-align: top;
+        }
+
+        .party-detail-value {
+            display: table-cell;
+            font-size: 8.5px;
+            vertical-align: top;
+        }
+
+        /* ── BANK STRIP ── */
+        .bank-strip {
+            background: #f8f9fa;
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+        }
+
+        .bank-strip-cell {
+            display: table-cell;
+            width: 33.33%;
+            vertical-align: middle;
+            padding: 5px 10px;
+            font-size: 8.5px;
+        }
+
+        .bank-label { font-weight: 700; color: #1a3c5e; }
+
+        /* ── ITEMS TABLE ── */
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8.5px;
+            border: 1px solid #000;
+            margin-bottom: 10px;
+            table-layout: fixed;
+        }
+
+        .invoice-table th {
+            background: #1a3c5e;
+            color: #fff;
+            border: 1px solid #1a3c5e;
+            padding: 5px 4px;
+            text-align: left;
+            font-size: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .invoice-table td {
+            border: 1px solid #bbb;
+            padding: 4px 4px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .invoice-table tbody tr:nth-child(even) { background: #f5f8fc; }
+        .product-name { font-weight: 600; }
+        .amount { font-weight: 700; }
+
+        /* ── FOOTER ── */
+        .invoice-footer {
+            display: table;
+            width: 100%;
+            border: 1px solid #000;
+            table-layout: fixed;
+            border-collapse: collapse;
+            min-height: 100px; /* Ensures space for the signature area */
+        }
+
+        .footer-left {
+            display: table-cell;
+            width: 65%;
+            padding: 0; /* Padding moved to inner wrapper for logic */
+            border-right: 1px solid #000;
+            vertical-align: top;
+        }
+
+        /* Logic to push content to bottom in a table cell */
+        .footer-left-wrapper {
+            display: table;
+            width: 100%;
+            height: 100%;
+            table-layout: fixed;
+        }
+
+        .footer-top-row {
+            display: table-row;
+            height: auto;
+        }
+
+        .footer-bottom-row {
+            display: table-row;
+            height: 1px; /* Forces this row to stay as small as its content at the bottom */
+        }
+
+        .footer-inner-padding {
+            display: table-cell;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+
+        .footer-inner-padding-bottom {
+            display: table-cell;
+            padding: 8px 10px;
+            vertical-align: bottom;
+        }
+
+        .footer-right {
+            display: table-cell;
+            width: 35%;
+            vertical-align: top;
+        }
+
+        .footer-right-inner {
+            display: table;
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .amount-words {
+            font-size: 8.5px;
+            margin-bottom: 4px;
+            line-height: 1.4;
+        }
+
+        .subject-line {
+            font-size: 8px;
+            color: #555;
+            margin-bottom: 14px;
+        }
+
+        .signature-area {
+            display: table;
+            width: 100%;
+        }
+
+        .signature-left {
+            display: table-cell;
+            font-size: 8px;
+            color: #555;
+            vertical-align: bottom;
+        }
+
+        .signature-right {
+            display: table-cell;
+            text-align: right;
+            vertical-align: bottom;
+        }
+
+        .signature-line-text {
+            font-size: 9px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .signature-for {
+            font-size: 7.5px;
+            color: #555;
+            display: block;
+            margin-top: 2px;
+        }
+
+        .qr-half {
+            display: table-cell;
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px;
+            border-right: 1px solid #000;
+            width: 50%;
+        }
+
+        .total-half, .footer-total-only {
+            display: table-cell;
+            text-align: center;
+            vertical-align: middle;
+            padding: 8px;
+        }
+
+        .total-box {
+            background: #1a3c5e;
+            color: #fff;
+            border-radius: 4px;
+            padding: 6px 10px;
+            display: inline-block;
+        }
+
+        .total-label {
+            font-size: 8px;
+            font-weight: 700;
+            display: block;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .total-amount {
+            font-size: 14px;
+            font-weight: 800;
+            white-space: nowrap;
+            display: block;
+        }
+
+        .qr-image { width: 65px; height: 65px; }
+        .qr-label { font-size: 7.5px; color: #555; display: block; margin: 2px 0; }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- ── HEADER BAND ── -->
+    <div class="header-band">
+        <div class="header-logo-cell">
+            <img th:if="${logoBase64 != null}" th:src="${logoBase64}" class="header-logo" alt="Logo"/>
+        </div>
+        <div class="header-business-cell">
+            <div class="business-name-header" th:text="${details.name}"></div>
+            <div class="business-address-header"
+                 th:text="${details.addressLine1 + ', ' + details.addressLine2 + ', ' + details.city + ', ' + details.state + ' - ' + details.pincode}">
+            </div>
+            <div class="business-address-header" style="margin-top:3px;"
+                 th:text="'GSTIN: ' + ${details.gstin} + '  |  Ph: ' + ${details.phoneNumber}">
+            </div>
+        </div>
+        <div class="header-invoice-cell">
+            <span class="invoice-badge">INVOICE</span>
+        </div>
+    </div>
+
+    <!-- ── INFO STRIP ── -->
+    <div class="info-strip">
+        <div class="info-strip-cell">
+            <span class="strip-label">Invoice No.</span>
+            <span th:text="${bill.id}"></span>
+        </div>
+        <div class="info-strip-cell">
+            <span class="strip-label">Invoice Date</span>
+            <span th:text="${#dates.format(bill.invoiceDate, 'dd/MM/yyyy')}"></span>
+        </div>
+        <div class="info-strip-cell">
+            <span class="strip-label">DL No. 1</span>
+            <span th:text="${details.dlNo1}"></span>
+        </div>
+        <div class="info-strip-cell">
+            <span class="strip-label">DL No. 2</span>
+            <span th:text="${details.dlNo2}"></span>
+        </div>
+        <div class="info-strip-cell">
+            <span class="strip-label">FSSAI</span>
+            <span th:text="${details.fssaiReg}"></span>
+        </div>
+    </div>
+
+    <!-- ── PARTIES ── -->
+    <div class="parties-section">
+        <div class="party-cell">
+            <div class="party-title">Bill From</div>
+            <div class="party-name" th:text="${details.name}"></div>
+            <div class="party-detail-row">
+                <div class="party-detail-label">GSTIN:</div>
+                <div class="party-detail-value" th:text="${details.gstin}"></div>
+            </div>
+            <div class="party-detail-row">
+                <div class="party-detail-label">Phone:</div>
+                <div class="party-detail-value" th:text="${details.phoneNumber}"></div>
+            </div>
+        </div>
+        <div class="party-cell">
+            <div class="party-title">Bill To</div>
+            <div class="party-name" th:text="${bill.purchaserName}"></div>
+            <div class="party-detail-row">
+                <div class="party-detail-label">DL No. 1:</div>
+                <div class="party-detail-value" th:text="${bill.dl1}"></div>
+            </div>
+            <div class="party-detail-row">
+                <div class="party-detail-label">DL No. 2:</div>
+                <div class="party-detail-value" th:text="${bill.dl2}"></div>
+            </div>
+            <div class="party-detail-row" th:if="${bill.gstin != null and !bill.gstin.isEmpty()}">
+                <div class="party-detail-label" th:text="${purchaserIdLabel + ':'}"></div>
+                <div class="party-detail-value" th:text="${purchaserIdValue}"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── BANK STRIP ── -->
+    <div class="bank-strip">
+        <div class="bank-strip-cell">
+            <span class="bank-label">Bank: </span>
+            <span th:text="${details.bankName}"></span>
+        </div>
+        <div class="bank-strip-cell">
+            <span class="bank-label">A/C No.: </span>
+            <span th:text="${details.accountNumber}"></span>
+        </div>
+        <div class="bank-strip-cell">
+            <span class="bank-label">IFSC: </span>
+            <span th:text="${details.ifscCode}"></span>
+        </div>
+    </div>
+
+    <!-- ── ITEMS TABLE ── -->
+    <table class="invoice-table">
+        <thead>
+        <tr>
+            <th style="width: 30px;">#</th>
+            <th>Product Name</th>
+            <th style="width: 50px;">Pack</th>
+            <th style="width: 60px;">HSN</th>
+            <th style="width: 60px;">Batch</th>
+            <th style="width: 50px;">Expiry</th>
+            <th style="width: 30px;">Qty</th>
+            <th style="width: 30px;">Free</th>
+            <th style="width: 55px;">MRP</th>
+            <th style="width: 55px;">Rate</th>
+            <th th:if="${taxMode == 'IGST'}" style="width: 45px;">IGST</th>
+            <th th:unless="${taxMode == 'IGST'}" style="width: 40px;">CGST</th>
+            <th th:unless="${taxMode == 'IGST'}" style="width: 40px;">SGST</th>
+            <th style="width: 70px;">Amount</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item, iterStat : ${bill.billItems}">
+            <td th:text="${iterStat.index + 1}"></td>
+            <td class="product-name" th:text="${item.snapshotProductName}"></td>
+            <td th:text="${item.snapshotPacking}"></td>
+            <td th:text="${item.snapshotHsn}"></td>
+            <td th:text="${item.batchNo}"></td>
+            <td th:text="${#dates.format(item.expiryDate, 'MM/yyyy')}"></td>
+            <td th:text="${item.quantity}"></td>
+            <td th:text="${item.free}"></td>
+            <td th:text="'₹' + ${#numbers.formatDecimal(item.snapshotUnitPrice, 1, 2)}"></td>
+            <td th:text="'₹' + ${#numbers.formatDecimal(item.rate, 1, 2)}"></td>
+            <td th:if="${taxMode == 'IGST'}"
+                th:text="${#numbers.formatDecimal(item.snapshotCgst + item.snapshotSgst, 1, 2)} + '%'"></td>
+            <td th:unless="${taxMode == 'IGST'}" th:text="${item.snapshotCgst} + '%'"></td>
+            <td th:unless="${taxMode == 'IGST'}" th:text="${item.snapshotSgst} + '%'"></td>
+            <td class="amount" th:text="'₹' + ${#numbers.formatDecimal(item.amount, 1, 2)}"></td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- ── FOOTER ── -->
+    <div class="invoice-footer">
+        <div class="footer-left">
+            <!-- Wrapper to force signature to bottom -->
+            <div class="footer-left-wrapper">
+                <div class="footer-top-row">
+                    <div class="footer-inner-padding">
+                        <div class="amount-words">
+                            <strong>Amount in words: </strong><span th:text="${totalAmountInWords}"></span>
+                        </div>
+                        <div class="subject-line"
+                             th:text="'Subject to ' + ${details.city} + ' Jurisdiction only.'">
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-bottom-row">
+                    <div class="footer-inner-padding-bottom">
+                        <div class="signature-area">
+                            <div class="signature-left">Thank you for your business!</div>
+                            <div class="signature-right">
+                                <span class="signature-line-text">Authorized Signatory</span>
+                                <span class="signature-for" th:text="'For ' + ${details.name}"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-right">
+            <div class="footer-right-inner">
+                <th:block th:if="${showQr and qrCodeBase64 != null}">
+                    <div class="qr-half">
+                        <span class="qr-label">Scan to Pay</span>
+                        <img th:src="${qrCodeBase64}" class="qr-image" alt="QR"/>
+                        <span class="qr-label" th:text="${details.upiId}"></span>
+                    </div>
+                    <div class="total-half">
+                        <div class="total-box">
+                            <span class="total-label">Total Amount</span>
+                            <span class="total-amount"
+                                  th:text="'₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></span>
+                        </div>
+                    </div>
+                </th:block>
+                <th:block th:unless="${showQr and qrCodeBase64 != null}">
+                    <div class="footer-total-only">
+                        <div class="total-box">
+                            <span class="total-label">Total Amount</span>
+                            <span class="total-amount"
+                                  th:text="'₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></span>
+                        </div>
+                    </div>
+                </th:block>
+            </div>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

@@ -25,4 +25,5 @@ public class DetailsDTO {
 		private String upiId;
 		private boolean showQrOnBill;
 		private String taxMode;
+		private String preferredTemplate;
 }

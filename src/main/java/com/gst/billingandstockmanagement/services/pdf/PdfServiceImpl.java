@@ -116,7 +116,10 @@ public class PdfServiceImpl implements PdfService {
         }
         context.setVariable("taxMode", details.getTaxMode());
 
-        String htmlContent = templateEngine.process("invoice-template", context);
+        String templateName = "template1".equals(details.getPreferredTemplate())
+                ? "invoice-template"
+                : "invoice-template-2";
+        String htmlContent = templateEngine.process(templateName, context);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
