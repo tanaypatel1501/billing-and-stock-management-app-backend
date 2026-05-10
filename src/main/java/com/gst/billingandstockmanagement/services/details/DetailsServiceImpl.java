@@ -136,6 +136,7 @@ public class DetailsServiceImpl implements DetailsService {
         details.setUpiId(detailsDTO.getUpiId());
         details.setShowQrOnBill(detailsDTO.isShowQrOnBill());
         details.setTaxMode(detailsDTO.getTaxMode() != null ? detailsDTO.getTaxMode() : "CGST_SGST");
+        details.setPreferredTemplate(detailsDTO.getPreferredTemplate() != null ? detailsDTO.getPreferredTemplate() : "template1");
     }
 
     private DetailsDTO mapDetailsToDetailsDTO(Details details) {
@@ -159,6 +160,7 @@ public class DetailsServiceImpl implements DetailsService {
         dto.setUpiId(details.getUpiId());
         dto.setShowQrOnBill(details.isShowQrOnBill());
         dto.setTaxMode(details.getTaxMode() != null ? details.getTaxMode() : "CGST_SGST");
+        dto.setPreferredTemplate(details.getPreferredTemplate());
         return dto;
     }
 }

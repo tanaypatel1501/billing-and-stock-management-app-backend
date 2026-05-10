@@ -64,12 +64,32 @@ jobs:
             git fetch origin
             git reset --hard origin/master
             docker build -t gst-backend .
+            
+            # 1. Kill any container currently using port 8080 (handles ghosts)
+            # This finds the container ID by port and removes it
+            docker rm -f $(docker ps -q --filter "publish=8080") || true
+            
+            # 2. Specifically remove our named container just in case
             docker rm -f gstm-backend || true
+            
+            # 3. Final network cleanup
             docker network prune -f
+            
+            # 4. Brief pause for the system to catch up
             sleep 2
+            
+            # 5. Run the new version
             docker run -d \
               --name gstm-backend \
               --restart unless-stopped \
               -p 8080:8080 \
               --env-file .env \
               gst-backend
+            sleep 30
+            status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health-check/server)
+            if [ "$status" -ne 200 ]; then
+              echo "Deployment failed — container not healthy"
+              docker logs gstm-backend --tail 50
+              exit 1
+            fi
+            echo "OCI deployment verified healthy"

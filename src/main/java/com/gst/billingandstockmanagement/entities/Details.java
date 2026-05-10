@@ -49,4 +49,7 @@ public class Details {
 
     @Column(name = "tax_mode", nullable = false)
     private String taxMode = "CGST_SGST";
+
+    @Column(name = "preferred_template", nullable = false)
+    private String preferredTemplate = "template1";
 }
