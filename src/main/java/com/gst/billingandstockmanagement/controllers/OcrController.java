@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.controllers;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -15,7 +16,9 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/ocr")
 public class OcrController {
 
-    private static final String OCR_URL = "http://localhost:8000/scan-label";
+    @Value("${ocr.url}")
+    private String ocrUrl;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     @PostMapping("/scan")
@@ -32,7 +35,7 @@ public class OcrController {
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(body, headers);
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> ocrResponse = restTemplate.postForObject(OCR_URL, request, Map.class);
+            Map<String, Object> ocrResponse = restTemplate.postForObject(ocrUrl, request, Map.class);
 
             if (ocrResponse == null || !ocrResponse.containsKey("text")) {
                 return ResponseEntity.status(502).body(Map.of("error", "OCR service returned no text"));

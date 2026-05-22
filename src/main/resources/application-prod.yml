@@ -49,3 +49,6 @@ tebi:
 
 branding:
   default-logo-url: ${TEBI_ENDPOINT}/${TEBI_BUCKET_NAME}/logos/default-gst-medicose.png
+
+ocr:
+  url: ${OCR_URL}
