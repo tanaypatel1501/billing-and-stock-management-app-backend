@@ -242,10 +242,19 @@ public class OcrController {
         if (candidates.isEmpty())
             Arrays.stream(lines).forEach(l -> candidates.addAll(extractNumbers(l)));
 
-        return candidates.stream()
+        List<Double> valid = candidates.stream()
                 .filter(n -> n >= 1 && n < 100000 && !(n >= 2000 && n <= 2099))
-                .max(Double::compareTo)
-                .orElse(null);
+                .collect(Collectors.toList());
+
+        if (valid.isEmpty()) return null;
+
+        List<Double> decimals = valid.stream()
+                .filter(n -> n % 1 != 0) // has decimal part
+                .collect(Collectors.toList());
+
+        return decimals.isEmpty()
+                ? valid.stream().max(Double::compareTo).orElse(null)
+                : decimals.stream().max(Double::compareTo).orElse(null);
     }
 
     private List<Double> extractNumbers(String text) {
