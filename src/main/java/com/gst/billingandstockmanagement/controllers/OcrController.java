@@ -87,6 +87,11 @@ public class OcrController {
                 .replaceAll("(?i)\\bM\\.?R\\.?P\\.?\\s*(Rs\\.?|\\u20B9)?\\s*:?\\s*", "MRP: ")
                 .replaceAll("(?i)\\bMax\\.?\\s*Retail\\s*Price\\.?:?\\s*",      "MRP: ");
 
+        result = result
+                .replaceAll("(?i)\\b[8B]atch\\s*N[o0Oi]\\.?:?\\s*", "BatchNo: ")
+                .replaceAll("(?i)\\b[E€]xp[il1]ry\\s*Dat[ae]\\.?:?\\s*", "ExpiryDate: ")
+                .replaceAll("(?i)\\bM[R8]P\\.?\\s*(Rs\\.?|\\u20B9)?\\s*:?\\s*", "MRP: ");
+
         // Unify named-month dates: "OCT.2027" | "OCT-2027" | "OCT 2027" | "OCT/27" → "OCT/2027"
         // Use Matcher.appendReplacement to avoid lambda split issues
         result = unifyNamedMonthDates(result);
@@ -133,31 +138,39 @@ public class OcrController {
     // ─── BATCH NUMBER ─────────────────────────────────────────────────────────
     private String extractBatchNo(String[] lines) {
         Pattern kwPat    = Pattern.compile("^BatchNo:\\s*", Pattern.CASE_INSENSITIVE);
-        Pattern batchPat = Pattern.compile("^([A-Z]{1,5}-[A-Z0-9]{2,12})", Pattern.CASE_INSENSITIVE);
+
+        Pattern batchPat = Pattern.compile("^([A-Z0-9/.-]{4,15})", Pattern.CASE_INSENSITIVE);
+
         Pattern monthPat = Pattern.compile("^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/",
                 Pattern.CASE_INSENSITIVE);
-        Pattern tokenPat = Pattern.compile("^[A-Z]{1,5}-[A-Z0-9]{2,12}$", Pattern.CASE_INSENSITIVE);
 
-        // Pass 1: keyword-guided
+        Pattern tokenPat = Pattern.compile("^[A-Z0-9/.-]{4,15}$", Pattern.CASE_INSENSITIVE);
+
         for (int i = 0; i < lines.length; i++) {
             if (!kwPat.matcher(lines[i]).find()) continue;
             String after = kwPat.matcher(lines[i]).replaceFirst("").trim();
+
+            after = after.replaceAll("^[:.,\\s]+", "");
+
             String hit   = tryBatch(after, lines, i, batchPat);
             if (hit != null) return hit;
             for (int j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
-                String hit2 = tryBatch(lines[j], lines, j, batchPat);
+                String hit2 = tryBatch(lines[j].replaceAll("^[:.,\\s]+", ""), lines, j, batchPat);
                 if (hit2 != null) return hit2;
             }
         }
 
-        // Pass 2: full-doc token scan
         for (int i = 0; i < lines.length; i++) {
             for (String token : lines[i].split("\\s+")) {
                 String t = token.replaceAll("^[:./ ]+|[:./ ]+$", "");
                 if (!tokenPat.matcher(t).matches()) continue;
                 if (monthPat.matcher(t).find())     continue;
-                String suffix = t.replaceAll("^[A-Za-z]+-", "");
-                if (suffix.matches("\\d{5,}"))      continue;
+
+                // If it looks purely like a date (e.g., DD/MM/YYYY), skip it
+                if (t.matches("\\d{2}[/.-]\\d{2}[/.-]\\d{2,4}")) continue;
+                if (t.matches("\\d+\\.\\d+")) continue;  // price like 125.00 — add this
+                if (t.matches("\\d{1,2}/20\\d{2}")) continue; // MM/YYYY date — add this
+
                 return stitch(t, lines, i).toUpperCase();
             }
         }
