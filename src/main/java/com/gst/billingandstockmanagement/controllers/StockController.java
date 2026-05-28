@@ -42,8 +42,9 @@ public class StockController {
     }
 
     @PostMapping("/add")
-    public void addStock(@RequestBody StockDTO stockDTO) {
-        stockService.addStock(stockDTO);
+    public ResponseEntity<StockDTO> addStock(@RequestBody StockDTO stockDTO) {
+        StockDTO savedStockDTO = stockService.addStock(stockDTO);
+        return ResponseEntity.ok(savedStockDTO);
     }
     
     @GetMapping("/user/{userId}")
