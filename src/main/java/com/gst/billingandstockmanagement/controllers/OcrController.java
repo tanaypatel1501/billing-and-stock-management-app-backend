@@ -92,14 +92,11 @@ public class OcrController {
                 .replaceAll("(?i)\\b[E€]xp[il1]ry\\s*Dat[ae]\\.?:?\\s*", "ExpiryDate: ")
                 .replaceAll("(?i)\\bM[R8]P\\.?\\s*(Rs\\.?|\\u20B9)?\\s*:?\\s*", "MRP: ");
 
-        // Unify named-month dates: "OCT.2027" | "OCT-2027" | "OCT 2027" | "OCT/27" → "OCT/2027"
-        // Use Matcher.appendReplacement to avoid lambda split issues
         result = unifyNamedMonthDates(result);
         result = unifyNumericDates(result);
         return result;
     }
 
-    // "JAN.2027" / "JAN-27" / "JAN 2027" → "JAN/2027"
     private String unifyNamedMonthDates(String text) {
         Pattern p = Pattern.compile(
                 "(?i)\\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[.\\-/\\s]?(\\d{2,4})\\b"
@@ -116,7 +113,6 @@ public class OcrController {
         return sb.toString();
     }
 
-    // "10/2027" | "10-27" | "10.2027" → "10/2027"
     private String unifyNumericDates(String text) {
         Pattern p = Pattern.compile("\\b(\\d{1,2})[.\\-/](\\d{2}|\\d{4})\\b");
         Matcher m  = p.matcher(text);
@@ -137,67 +133,66 @@ public class OcrController {
 
     // ─── BATCH NUMBER ─────────────────────────────────────────────────────────
     private String extractBatchNo(String[] lines) {
-        Pattern kwPat    = Pattern.compile("^BatchNo:\\s*", Pattern.CASE_INSENSITIVE);
-
-        Pattern batchPat = Pattern.compile("^([A-Z0-9/.-]{4,15})", Pattern.CASE_INSENSITIVE);
-
-        Pattern monthPat = Pattern.compile("^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/",
-                Pattern.CASE_INSENSITIVE);
-
-        Pattern tokenPat = Pattern.compile("^[A-Z0-9/.-]{4,15}$", Pattern.CASE_INSENSITIVE);
+        Pattern kwPat    = Pattern.compile("BatchNo:\\s*", Pattern.CASE_INSENSITIVE);
+        Pattern batchPat = Pattern.compile("([A-Z0-9\\-]+)", Pattern.CASE_INSENSITIVE);
+        Pattern monthPat = Pattern.compile("^(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/", Pattern.CASE_INSENSITIVE);
+        Pattern tokenPat = Pattern.compile("^[A-Z0-9\\-]{4,15}$", Pattern.CASE_INSENSITIVE);
+        Pattern dateLinePat = Pattern.compile("(ExpiryDate:|MfgDate:)", Pattern.CASE_INSENSITIVE);
 
         for (int i = 0; i < lines.length; i++) {
-            if (!kwPat.matcher(lines[i]).find()) continue;
-            String after = kwPat.matcher(lines[i]).replaceFirst("").trim();
+            Matcher kwMatcher = kwPat.matcher(lines[i]);
+            if (!kwMatcher.find()) continue;
 
-            after = after.replaceAll("^[:.,\\s]+", "");
+            int endIdx = kwMatcher.end();
+            String after = lines[i].substring(endIdx).trim();
+            after = after.replaceAll("^[:.,>\\s\\-]+", "");
 
-            String hit   = tryBatch(after, lines, i, batchPat);
-            if (hit != null) return hit;
-            for (int j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
-                String hit2 = tryBatch(lines[j].replaceAll("^[:.,\\s]+", ""), lines, j, batchPat);
-                if (hit2 != null) return hit2;
+            Matcher bm = batchPat.matcher(after);
+            if (bm.find()) {
+                String candidate = bm.group(1).trim();
+                if (!isGarbageToken(candidate) && candidate.length() >= 3) {
+                    return candidate.toUpperCase();
+                }
             }
         }
 
+        // Strategy 2: Fallback processing
         for (int i = 0; i < lines.length; i++) {
-            for (String token : lines[i].split("\\s+")) {
-                String t = token.replaceAll("^[:./ ]+|[:./ ]+$", "");
-                if (!tokenPat.matcher(t).matches()) continue;
-                if (monthPat.matcher(t).find())     continue;
+            if (dateLinePat.matcher(lines[i]).find()) {
+                for (int k = i - 1; k >= Math.max(0, i - 2); k--) {
+                    String candidateLine = lines[k].trim();
+                    if (isGarbageToken(candidateLine)) continue;
 
-                // If it looks purely like a date (e.g., DD/MM/YYYY), skip it
-                if (t.matches("\\d{2}[/.-]\\d{2}[/.-]\\d{2,4}")) continue;
-                if (t.matches("\\d+\\.\\d+")) continue;  // price like 125.00 — add this
-                if (t.matches("\\d{1,2}/20\\d{2}")) continue; // MM/YYYY date — add this
+                    for (String token : candidateLine.split("\\s+")) {
+                        String t = token.replaceAll("^[:./> ]+|[:./> ]+$", "");
+                        if (!tokenPat.matcher(t).matches()) continue;
+                        if (monthPat.matcher(t).find())     continue;
+                        if (t.matches("\\d{2}[/.-]\\d{2}[/.-]\\d{2,4}")) continue;
+                        if (t.matches("\\d+\\.\\d+")) continue;
+                        if (t.matches("\\d{1,2}/20\\d{2}")) continue;
 
-                return stitch(t, lines, i).toUpperCase();
+                        return t.toUpperCase();
+                    }
+                }
             }
         }
         return null;
     }
 
-    private String tryBatch(String text, String[] lines, int idx, Pattern batchPat) {
-        Matcher m = batchPat.matcher(text);
-        if (!m.find()) return null;
-        return stitch(m.group(1), lines, idx).toUpperCase();
-    }
-
-    // Stitch OCR line-wrapped batch: "TP-001" + "0326" → "TP-0010326"
-    private String stitch(String base, String[] lines, int idx) {
-        if (idx + 1 >= lines.length) return base;
-        String next = lines[idx + 1].trim();
-        if (next.matches("[A-Z0-9]{2,8}") && !next.matches("\\d{4}") && !next.contains("."))
-            return base + next;
-        return base;
+    private boolean isGarbageToken(String text) {
+        String lower = text.toLowerCase();
+        return lower.contains("fssai") ||
+                lower.contains("lic") ||
+                lower.contains("no.") ||
+                lower.contains("licence") ||
+                text.matches("\\d{10,}");
     }
 
     // ─── EXPIRY DATE ──────────────────────────────────────────────────────────
     private String extractExpiryDate(String[] lines) {
-        Pattern expKw = Pattern.compile("^ExpiryDate:\\s*", Pattern.CASE_INSENSITIVE);
-        Pattern mfgKw = Pattern.compile("^MfgDate:",        Pattern.CASE_INSENSITIVE);
+        Pattern expKw = Pattern.compile("ExpiryDate:\\s*", Pattern.CASE_INSENSITIVE);
+        Pattern mfgKw = Pattern.compile("MfgDate:",        Pattern.CASE_INSENSITIVE);
 
-        // Strategy 1: keyword proximity
         for (int i = 0; i < lines.length; i++) {
             if (!expKw.matcher(lines[i]).find()) continue;
             String inline = expKw.matcher(lines[i]).replaceFirst("").trim();
@@ -209,7 +204,6 @@ public class OcrController {
             }
         }
 
-        // Strategy 2: latest non-mfg date
         List<int[]> pool = new ArrayList<>();
         for (int i = 0; i < lines.length; i++) {
             int[] d = findDate(lines[i]);
@@ -234,7 +228,7 @@ public class OcrController {
 
     // ─── MRP ──────────────────────────────────────────────────────────────────
     private Double extractMrp(String[] lines) {
-        Pattern mrpKw = Pattern.compile("^MRP:\\s*", Pattern.CASE_INSENSITIVE);
+        Pattern mrpKw = Pattern.compile("MRP:\\s*", Pattern.CASE_INSENSITIVE);
         Pattern uspKw = Pattern.compile(
                 "\\bUSP\\b|\\bper\\s*(tablet|cap|strip|unit|ml|gm)\\b",
                 Pattern.CASE_INSENSITIVE);
@@ -252,8 +246,13 @@ public class OcrController {
             }
         }
 
-        if (candidates.isEmpty())
-            Arrays.stream(lines).forEach(l -> candidates.addAll(extractNumbers(l)));
+        if (candidates.isEmpty()) {
+            for (String line : lines) {
+                if (!uspKw.matcher(line).find()) {
+                    candidates.addAll(extractNumbers(line));
+                }
+            }
+        }
 
         List<Double> valid = candidates.stream()
                 .filter(n -> n >= 1 && n < 100000 && !(n >= 2000 && n <= 2099))
@@ -261,13 +260,7 @@ public class OcrController {
 
         if (valid.isEmpty()) return null;
 
-        List<Double> decimals = valid.stream()
-                .filter(n -> n % 1 != 0) // has decimal part
-                .collect(Collectors.toList());
-
-        return decimals.isEmpty()
-                ? valid.stream().max(Double::compareTo).orElse(null)
-                : decimals.stream().max(Double::compareTo).orElse(null);
+        return valid.stream().max(Double::compareTo).orElse(null);
     }
 
     private List<Double> extractNumbers(String text) {
@@ -288,7 +281,6 @@ public class OcrController {
     );
 
     private int[] findDate(String text) {
-        // Named month: JAN/2027
         Matcher nm = Pattern.compile(
                 "\\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[/\\-.\\s](20\\d{2})\\b",
                 Pattern.CASE_INSENSITIVE
@@ -299,7 +291,6 @@ public class OcrController {
             if (year >= 2020 && year <= 2040) return new int[]{year, month};
         }
 
-        // Numeric month: 10/2027
         Matcher dm = Pattern.compile("\\b(\\d{1,2})[/\\-.](20\\d{2})\\b").matcher(text);
         if (dm.find()) {
             int month = Integer.parseInt(dm.group(1));
