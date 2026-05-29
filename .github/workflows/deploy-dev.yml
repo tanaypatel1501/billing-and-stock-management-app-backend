@@ -55,27 +55,35 @@ jobs:
             cd ~/billing-and-stock-management-app-backend
             git fetch origin
             git reset --hard origin/dev
+            
+            echo "Building new dev image..."
             docker build -t gst-backend-dev .
 
-            # Ensure shared network exists (no-op if already exists)
-            docker network create gst-network || true
-
-            # Ensure EasyOCR is on the shared network (no-op if already connected)
-            docker network connect gst-network easyocr-service || true
-
-            # Kill old Spring Boot containers
-            docker rm -f $(docker ps -q --filter "publish=8080") || true
+            echo "Cleaning up old dev containers and networks..."
+            # Specifically remove our named dev container safely
+            docker stop gstm-backend-dev 2>/dev/null || true
+            docker rm -f gstm-backend-dev 2>/dev/null || true
             
-            # 2. Specifically remove our named container just in case
-            docker rm -f gstm-backend-dev || true
+            # Safely check and remove any other lingering containers on port 8080
+            OLD_CONTAINERS=$(docker ps -q --filter "publish=8080")
+            if [ -n "$OLD_CONTAINERS" ]; then
+              docker rm -f $OLD_CONTAINERS
+            fi
             
-            # 3. Final network cleanup
+            # Prune old/unused networks BEFORE recreating the shared network infrastructure
             docker network prune -f
             
-            # 4. Brief pause for the system to catch up
+            echo "Setting up network infrastructure..."
+            # Ensure shared network exists
+            docker network create gst-network || true
+
+            # Ensure EasyOCR is on the shared network
+            docker network connect gst-network easyocr-service || true
+            
+            # Brief pause for the system network layer to settle
             sleep 2
 
-            # Start Spring Boot on the shared network
+            echo "Starting Spring Boot dev container..."
             docker run -d \
               --name gstm-backend-dev \
               --restart unless-stopped \
@@ -84,6 +92,7 @@ jobs:
               --env-file .env \
               gst-backend-dev
 
+            echo "Verifying dev deployment health..."
             sleep 30
             status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health-check/server)
             if [ "$status" -ne 200 ]; then
