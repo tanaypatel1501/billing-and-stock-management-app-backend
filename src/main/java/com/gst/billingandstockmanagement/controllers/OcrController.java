@@ -198,7 +198,9 @@ public class OcrController {
             String inline = expKw.matcher(lines[i]).replaceFirst("").trim();
             int[]  d      = findDate(inline);
             if (d != null) return toLastDay(d);
+
             for (int j = i + 1; j <= Math.min(i + 2, lines.length - 1); j++) {
+                if (mfgKw.matcher(lines[j]).find()) continue; // Skip if it belongs to Mfg
                 int[] d2 = findDate(lines[j]);
                 if (d2 != null) return toLastDay(d2);
             }
@@ -208,22 +210,28 @@ public class OcrController {
         for (int i = 0; i < lines.length; i++) {
             int[] d = findDate(lines[i]);
             if (d == null) continue;
-            boolean mfg = mfgKw.matcher(lines[i]).find();
-            for (int off = 1; off <= 2; off++) {
-                if (i - off >= 0           && mfgKw.matcher(lines[i - off]).find()) mfg = true;
-                if (i + off < lines.length && mfgKw.matcher(lines[i + off]).find()) mfg = true;
+
+            boolean isMfg = mfgKw.matcher(lines[i]).find();
+            for (int off = 1; off <= 1; off++) {
+                if (i - off >= 0           && mfgKw.matcher(lines[i - off]).find()) isMfg = true;
+                if (i + off < lines.length && mfgKw.matcher(lines[i + off]).find()) isMfg = true;
             }
-            pool.add(new int[]{d[0], d[1], mfg ? 1 : 0});
+            pool.add(new int[]{d[0], d[1], isMfg ? 1 : 0});
         }
 
         if (pool.isEmpty()) return null;
-        boolean hasNonMfg = pool.stream().anyMatch(e -> e[2] == 0);
-        List<int[]> candidates = hasNonMfg
-                ? pool.stream().filter(e -> e[2] == 0).collect(Collectors.toList())
-                : pool;
 
-        candidates.sort(Comparator.comparingInt((int[] e) -> e[0]).thenComparingInt(e -> e[1]));
-        return toLastDay(candidates.get(candidates.size() - 1));
+        List<int[]> nonMfgCandidates = pool.stream()
+                .filter(e -> e[2] == 0)
+                .collect(Collectors.toList());
+
+        if (!nonMfgCandidates.isEmpty()) {
+            nonMfgCandidates.sort(Comparator.comparingInt((int[] e) -> e[0]).thenComparingInt(e -> e[1]));
+            return toLastDay(nonMfgCandidates.get(nonMfgCandidates.size() - 1));
+        }
+
+        pool.sort(Comparator.comparingInt((int[] e) -> e[0]).thenComparingInt(e -> e[1]));
+        return toLastDay(pool.get(pool.size() - 1));
     }
 
     // ─── MRP ──────────────────────────────────────────────────────────────────
