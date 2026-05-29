@@ -13,6 +13,11 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
 gmail:
   client-id: ${GMAIL_CLIENT_ID}
   client-secret: ${GMAIL_CLIENT_SECRET}
@@ -43,3 +48,5 @@ tebi:
 branding:
   default-logo-url: ${TEBI_ENDPOINT}/${TEBI_BUCKET_NAME}/logos/default-gst-medicose.png
 
+ocr:
+  url: ${OCR_URL}

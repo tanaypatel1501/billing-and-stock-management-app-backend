@@ -65,13 +65,13 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
-    public void addStock(StockDTO stockDTO) {
+    public StockDTO addStock(StockDTO stockDTO) {
         User user = userRepository.findById(stockDTO.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
         Product product = productRepository.findById(stockDTO.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
 
         // Check if the user already has the same product in their stock
         Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), stockDTO.getExpiryDate());
-
+        Stock savedStock;
         if (existingStock != null) {
 
         	// Convert both dates to LocalDate for comparison
@@ -86,7 +86,7 @@ public class StockServiceImpl implements StockService {
                 if (stockDTO.getMrp() != null) {
                     existingStock.setMrp(stockDTO.getMrp());
                 }
-                stockRepository.save(existingStock);
+                savedStock = stockRepository.save(existingStock);
             } else {
                 // If the batch number or expiry date is different, create a new stock entry
                 Stock stock = new Stock();
@@ -96,7 +96,7 @@ public class StockServiceImpl implements StockService {
                 stock.setBatchNo(stockDTO.getBatchNo());
                 stock.setExpiryDate(stockDTO.getExpiryDate());
                 stock.setMrp(stockDTO.getMrp());
-                stockRepository.save(stock);
+                savedStock = stockRepository.save(stock);
             }
         } else {
             // If the product does not exist in the user's stock, create a new stock entry
@@ -107,8 +107,9 @@ public class StockServiceImpl implements StockService {
             stock.setBatchNo(stockDTO.getBatchNo());
             stock.setExpiryDate(stockDTO.getExpiryDate());
             stock.setMrp(stockDTO.getMrp());
-            stockRepository.save(stock);
+            savedStock = stockRepository.save(stock);
         }
+        return mapToDTO(savedStock);
     }
 
     @Override
@@ -282,5 +283,17 @@ public class StockServiceImpl implements StockService {
                 "<p style='margin:0 0 10px; font-size:13px; color:#666;'>Need help? Contact us at <a href='mailto:gstmedicose+support@gmail.com' style='color:#48e3cc; text-decoration:none; font-weight:600'>gstmedicose+support@gmail.com</a></p>" +
                 "<p style='margin:0; font-size:12px; color:#bbb;'>Report generated on: " + formattedDateTime + " | ID: " + uniqueId.substring(0, 8) + "<br>&copy; 2026 GST Medicose. All Rights Reserved.</p>" +
                 "</div></div></td></tr></table></body></html>";
+    }
+
+    private StockDTO mapToDTO(Stock stock) {
+        StockDTO dto = new StockDTO();
+        dto.setId(stock.getId()); // The critical ID needed by Angular!
+        dto.setUserId(stock.getUser().getId());
+        dto.setProductId(stock.getProduct().getId());
+        dto.setQuantity(stock.getQuantity());
+        dto.setBatchNo(stock.getBatchNo());
+        dto.setExpiryDate(stock.getExpiryDate());
+        dto.setMrp(stock.getMrp());
+        return dto;
     }
 }

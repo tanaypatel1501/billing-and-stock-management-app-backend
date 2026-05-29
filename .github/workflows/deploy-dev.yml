@@ -56,9 +56,14 @@ jobs:
             git fetch origin
             git reset --hard origin/dev
             docker build -t gst-backend-dev .
-            
-            # 1. Kill any container currently using port 8080 (handles ghosts)
-            # This finds the container ID by port and removes it
+
+            # Ensure shared network exists (no-op if already exists)
+            docker network create gst-network || true
+
+            # Ensure EasyOCR is on the shared network (no-op if already connected)
+            docker network connect gst-network easyocr-service || true
+
+            # Kill old Spring Boot containers
             docker rm -f $(docker ps -q --filter "publish=8080") || true
             
             # 2. Specifically remove our named container just in case
@@ -69,19 +74,21 @@ jobs:
             
             # 4. Brief pause for the system to catch up
             sleep 2
-            
-            # 5. Run the new version
+
+            # Start Spring Boot on the shared network
             docker run -d \
               --name gstm-backend-dev \
               --restart unless-stopped \
+              --network gst-network \
               -p 8080:8080 \
               --env-file .env \
               gst-backend-dev
+
             sleep 30
             status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health-check/server)
             if [ "$status" -ne 200 ]; then
-            echo "Deployment failed — container not healthy"
-            docker logs gstm-backend-dev --tail 50
-            exit 1
+              echo "Deployment failed — container not healthy"
+              docker logs gstm-backend-dev --tail 50
+              exit 1
             fi
-            echo "OCI deployment verified healthy"
+            echo "OCI dev deployment verified healthy"

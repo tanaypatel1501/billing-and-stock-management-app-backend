@@ -12,7 +12,7 @@ public interface StockService {
 
     StockDTO getStockById(Long stockId);
 
-    void addStock(StockDTO stockDTO);
+    StockDTO addStock(StockDTO stockDTO);
     
     List<Stock> getStockByUser(User user);
 
