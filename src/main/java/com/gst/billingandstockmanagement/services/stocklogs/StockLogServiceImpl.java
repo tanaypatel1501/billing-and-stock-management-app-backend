@@ -5,10 +5,11 @@ import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.StockLog;
 import com.gst.billingandstockmanagement.repository.StockLogRepository;
 import com.gst.billingandstockmanagement.repository.StockRepository;
-import com.gst.billingandstockmanagement.services.stocklogs.StockLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -54,16 +55,30 @@ public class StockLogServiceImpl implements StockLogService {
         return logs.stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
-    // Helper mapping method
+    @Override
+    @Transactional(readOnly = true)
+    public Page<StockLogDTO> getLogsByUserId(Long userId, String search, Pageable pageable) {
+        Page<StockLog> logs = stockLogRepository.findByUserIdWithSearch(userId, search, pageable);
+        return logs.map(this::mapToDTO);
+    }
+
+    // Update mapToDTO to include enriched fields
     private StockLogDTO mapToDTO(StockLog log) {
         StockLogDTO dto = new StockLogDTO();
         dto.setId(log.getId());
-        if (log.getStock() != null) {
-            dto.setStockId(log.getStock().getId());
-        }
         dto.setAction(log.getAction());
         dto.setNotes(log.getNotes());
         dto.setTimestamp(log.getTimestamp());
+
+        if (log.getStock() != null) {
+            dto.setStockId(log.getStock().getId());
+            dto.setBatchNo(log.getStock().getBatchNo());
+
+            if (log.getStock().getProduct() != null) {
+                dto.setProductName(log.getStock().getProduct().getName());
+                dto.setProductPacking(log.getStock().getProduct().getPacking());
+            }
+        }
         return dto;
     }
 }
