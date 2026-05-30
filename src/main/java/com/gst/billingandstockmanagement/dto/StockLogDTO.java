@@ -10,4 +10,8 @@ public class StockLogDTO {
     private String action;
     private String notes;
     private LocalDateTime timestamp;
+
+    private String productName;
+    private String productPacking;
+    private String batchNo;
 }
