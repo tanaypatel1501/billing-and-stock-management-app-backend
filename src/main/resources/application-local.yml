@@ -13,6 +13,9 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  flyway:
+    enabled: false
+
   servlet:
     multipart:
       max-file-size: 10MB
@@ -28,6 +31,8 @@ app:
   client:
     url: ${CLIENT_URL:http://localhost:4200/}
     reset-password-url: ${RESET_PASSWORD_URL:${app.client.url}/reset-password}
+  product-request:
+    auto-approve-delay-ms: ${AUTO_APPROVE_DELAY}
 
 jwt:
   secret: ${JWT_SECRET:dev-secret}
