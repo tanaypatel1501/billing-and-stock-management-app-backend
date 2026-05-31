@@ -32,7 +32,7 @@ public class EmailServiceImpl implements EmailService {
             Session session = Session.getInstance(props, null);
 
             MimeMessage email = new MimeMessage(session);
-            email.setFrom(new InternetAddress(fromEmail));
+            email.setFrom(new InternetAddress(fromEmail, "GST Medicose"));
             email.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(to));
             email.setSubject(subject);
             email.setContent(htmlContent, "text/html; charset=UTF-8");
