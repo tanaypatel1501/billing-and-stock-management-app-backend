@@ -17,6 +17,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 @Service
 public class BillServiceImpl implements BillService {
@@ -179,9 +186,64 @@ public class BillServiceImpl implements BillService {
     @Override
     public Page<Bill> searchWithPagination(SearchRequest request) {
         SpecificationBuilder<Bill> builder = new SpecificationBuilder<>();
-        List<String> fields = List.of("purchaserName", "gstin", "billItems.snapshotProductName","invoiceDate");
+        List<String> fields = List.of(
+                "purchaserName", "gstin",
+                "billItems.snapshotProductName", "invoiceDate"
+        );
         Pageable pageable = PaginationUtils.getPageable(request);
-        return billRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
+
+        // Pull date range keys out before passing to generic builder
+        Map<String, String> filters = request.getFilters() == null
+                ? new HashMap<>()
+                : new HashMap<>(request.getFilters());
+
+        String fromDateStr = filters.remove("invoiceDate.from");
+        String toDateStr   = filters.remove("invoiceDate.to");
+
+        // Build the generic spec (text search + remaining filters like user.id, paid)
+        request.setFilters(filters);
+        Specification<Bill> baseSpec = builder.build(
+                request.getSearchText(), fields, request.getFilters()
+        );
+
+        // Add date range on top if provided
+        Specification<Bill> dateSpec = buildDateRangeSpec(fromDateStr, toDateStr);
+
+        Specification<Bill> finalSpec = (dateSpec != null)
+                ? Specification.where(baseSpec).and(dateSpec)
+                : baseSpec;
+
+        return billRepository.findAll(finalSpec, pageable);
+    }
+
+    private Specification<Bill> buildDateRangeSpec(String fromStr, String toStr) {
+        if (fromStr == null && toStr == null) return null;
+
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+            try {
+                if (fromStr != null && !fromStr.isBlank()) {
+                    Date from = sdf.parse(fromStr);
+                    predicates.add(cb.greaterThanOrEqualTo(root.get("invoiceDate"), from));
+                }
+                if (toStr != null && !toStr.isBlank()) {
+                    // Add 1 day to make "to" inclusive of the full day
+                    Date to = sdf.parse(toStr);
+                    java.util.Calendar cal = java.util.Calendar.getInstance();
+                    cal.setTime(to);
+                    cal.add(java.util.Calendar.DAY_OF_MONTH, 1);
+                    predicates.add(cb.lessThan(root.get("invoiceDate"), cal.getTime()));
+                }
+            } catch (Exception e) {
+                // Bad date format — ignore silently, don't crash the search
+            }
+
+            return predicates.isEmpty()
+                    ? cb.conjunction()
+                    : cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 
     @Override
