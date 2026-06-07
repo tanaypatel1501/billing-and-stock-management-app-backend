@@ -16,6 +16,13 @@ spring:
         hibernate.generate_statistics: false
         hibernate.temp.use_jdbc_metadata_defaults: false
     show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+
+  jackson:
+    time-zone: Asia/Kolkata
 
   flyway:
     baseline-on-migrate: true

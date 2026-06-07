@@ -70,7 +70,8 @@ public class StockServiceImpl implements StockService {
         Product product = productRepository.findById(stockDTO.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
 
         // Check if the user already has the same product in their stock
-        Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), stockDTO.getExpiryDate());
+        Date normalizedExpiry = normalizeExpiryDate(stockDTO.getExpiryDate());
+        Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), normalizedExpiry);
         Stock savedStock;
         if (existingStock != null) {
 
@@ -94,7 +95,9 @@ public class StockServiceImpl implements StockService {
                 stock.setProduct(product);
                 stock.setQuantity(stockDTO.getQuantity());
                 stock.setBatchNo(stockDTO.getBatchNo());
-                stock.setExpiryDate(stockDTO.getExpiryDate());
+                stock.setExpiryDate(
+                        normalizeExpiryDate(stockDTO.getExpiryDate())
+                );
                 stock.setMrp(stockDTO.getMrp());
                 savedStock = stockRepository.save(stock);
             }
@@ -105,7 +108,9 @@ public class StockServiceImpl implements StockService {
             stock.setProduct(product);
             stock.setQuantity(stockDTO.getQuantity());
             stock.setBatchNo(stockDTO.getBatchNo());
-            stock.setExpiryDate(stockDTO.getExpiryDate());
+            stock.setExpiryDate(
+                    normalizeExpiryDate(stockDTO.getExpiryDate())
+            );
             stock.setMrp(stockDTO.getMrp());
             savedStock = stockRepository.save(stock);
         }
@@ -132,7 +137,9 @@ public class StockServiceImpl implements StockService {
 
         stock.setProduct(product);
         stock.setBatchNo(stockDTO.getBatchNo());
-        stock.setExpiryDate(stockDTO.getExpiryDate());
+        stock.setExpiryDate(
+                normalizeExpiryDate(stockDTO.getExpiryDate())
+        );
         if (stockDTO.getMrp() != null) {
             stock.setMrp(stockDTO.getMrp());
         }
@@ -164,13 +171,14 @@ public class StockServiceImpl implements StockService {
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")
     @Transactional
     public void sendExpiryAlerts() {
+        Date today = new Date();
         Calendar cal = Calendar.getInstance();
-        Date today = cal.getTime();
+        cal.setTime(today);
         cal.add(Calendar.DAY_OF_MONTH, 30);
         Date thirtyDaysFromNow = cal.getTime();
 
         List<Stock> nearExpiry = stockRepository
-                .findByExpiryDateBetweenAndLastExpiryNotificationDateIsNull(new Date(), thirtyDaysFromNow);
+                .findByExpiryDateBetweenAndLastExpiryNotificationDateIsNull(today, thirtyDaysFromNow);
 
         List<Stock> alreadyExpired = stockRepository
                 .findByExpiryDateBeforeAndExpiredNotificationDateIsNull(new Date());
@@ -295,5 +303,21 @@ public class StockServiceImpl implements StockService {
         dto.setExpiryDate(stock.getExpiryDate());
         dto.setMrp(stock.getMrp());
         return dto;
+    }
+
+    private Date normalizeExpiryDate(Date date) {
+        if (date == null) {
+            return null;
+        }
+
+        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
+        cal.setTime(date);
+
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
+
+        return cal.getTime();
     }
 }

@@ -12,6 +12,13 @@ spring:
     hibernate:
       ddl-auto: ${DDL_AUTO:update}
     show-sql: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Kolkata
+
+  jackson:
+    time-zone: Asia/Kolkata
 
   flyway:
     enabled: false
