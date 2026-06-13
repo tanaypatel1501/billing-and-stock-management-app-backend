@@ -18,4 +18,5 @@ public class BillDTO {
     private boolean paid;
 
     private List<BillItemsDTO> billItems;
+    private Long purchaserId;
 }

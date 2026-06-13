@@ -3,10 +3,13 @@ package com.gst.billingandstockmanagement.services.purchaser;
 import com.gst.billingandstockmanagement.dto.PurchaserDTO;
 import com.gst.billingandstockmanagement.entities.Purchaser;
 import com.gst.billingandstockmanagement.entities.User;
+import com.gst.billingandstockmanagement.repository.BillRepository;
 import com.gst.billingandstockmanagement.repository.PurchaserRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -16,6 +19,9 @@ public class PurchaserServiceImpl implements PurchaserService {
 
     @Autowired
     private PurchaserRepository purchaserRepository;
+
+    @Autowired
+    private BillRepository billRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -51,6 +57,18 @@ public class PurchaserServiceImpl implements PurchaserService {
     }
 
     @Override
+    public Page<PurchaserDTO> getPagedByUser(Long userId, String search, Pageable pageable) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Page<Purchaser> page = (search != null && !search.isBlank())
+                ? purchaserRepository.findByUserAndNameContainingIgnoreCase(user, search, pageable)
+                : purchaserRepository.findByUser(user, pageable);
+
+        return page.map(this::toDTO);
+    }
+
+    @Override
     public List<PurchaserDTO> searchByName(Long userId, String name) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -64,6 +82,7 @@ public class PurchaserServiceImpl implements PurchaserService {
 
     @Override
     public void deletePurchaser(Long purchaserId) {
+        billRepository.nullifyPurchaserReference(purchaserId);
         purchaserRepository.deleteById(purchaserId);
     }
 
