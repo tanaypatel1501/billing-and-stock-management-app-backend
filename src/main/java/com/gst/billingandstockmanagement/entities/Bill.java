@@ -42,5 +42,10 @@ public class Bill {
 
 	@OneToMany(mappedBy = "bill", cascade = CascadeType.REMOVE)
 	private List<BillItems> billItems;
+
+	@JsonIgnore
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "purchaser_id", nullable = true)
+	private Purchaser purchaser;
 }
 

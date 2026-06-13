@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.services.bill;
 
+import com.gst.billingandstockmanagement.repository.PurchaserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.BillDTO;
@@ -37,6 +38,9 @@ public class BillServiceImpl implements BillService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PurchaserRepository purchaserRepository;
+
     @Override
     public BillDTO addBill(BillDTO billDTO) {
         // Fetch the User entity from the database using the userId
@@ -52,6 +56,10 @@ public class BillServiceImpl implements BillService {
         bill.setGstin(billDTO.getGstin());
         bill.setInvoiceDate(billDTO.getInvoiceDate());
         bill.setPaid(billDTO.isPaid());
+        if (billDTO.getPurchaserId() != null) {
+            purchaserRepository.findById(billDTO.getPurchaserId())
+                    .ifPresent(bill::setPurchaser);
+        }
 
         // Save the Bill entity using billRepository
         Bill savedBill = billRepository.save(bill);
@@ -192,7 +200,6 @@ public class BillServiceImpl implements BillService {
         );
         Pageable pageable = PaginationUtils.getPageable(request);
 
-        // Pull date range keys out before passing to generic builder
         Map<String, String> filters = request.getFilters() == null
                 ? new HashMap<>()
                 : new HashMap<>(request.getFilters());
@@ -200,20 +207,25 @@ public class BillServiceImpl implements BillService {
         String fromDateStr = filters.remove("invoiceDate.from");
         String toDateStr   = filters.remove("invoiceDate.to");
 
-        // Build the generic spec (text search + remaining filters like user.id, paid)
         request.setFilters(filters);
         Specification<Bill> baseSpec = builder.build(
                 request.getSearchText(), fields, request.getFilters()
         );
 
-        // Add date range on top if provided
-        Specification<Bill> dateSpec = buildDateRangeSpec(fromDateStr, toDateStr);
+        Specification<Bill> dateSpec      = buildDateRangeSpec(fromDateStr, toDateStr);
+        Specification<Bill> purchaserSpec = buildPurchaserSpec(request.getPurchaserId());
 
-        Specification<Bill> finalSpec = (dateSpec != null)
-                ? Specification.where(baseSpec).and(dateSpec)
-                : baseSpec;
+        Specification<Bill> finalSpec = Specification.where(baseSpec);
+        if (dateSpec != null)      finalSpec = finalSpec.and(dateSpec);
+        if (purchaserSpec != null) finalSpec = finalSpec.and(purchaserSpec);
 
         return billRepository.findAll(finalSpec, pageable);
+    }
+
+    private Specification<Bill> buildPurchaserSpec(Long purchaserId) {
+        if (purchaserId == null) return null;
+        return (root, query, cb) ->
+                cb.equal(root.get("purchaser").get("id"), purchaserId);
     }
 
     private Specification<Bill> buildDateRangeSpec(String fromStr, String toStr) {

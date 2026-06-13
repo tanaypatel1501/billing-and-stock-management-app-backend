@@ -14,5 +14,6 @@ public class SearchRequest {
     private String direction = "asc";
     private String searchText;
     private Map<String, String> filters;
+    private Long purchaserId;
 }
 
