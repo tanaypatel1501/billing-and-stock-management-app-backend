@@ -66,51 +66,29 @@ public class StockServiceImpl implements StockService {
 
     @Override
     public StockDTO addStock(StockDTO stockDTO) {
-        User user = userRepository.findById(stockDTO.getUserId()).orElseThrow(() -> new RuntimeException("User not found"));
-        Product product = productRepository.findById(stockDTO.getProductId()).orElseThrow(() -> new RuntimeException("Product not found"));
+        User user = userRepository.findById(stockDTO.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Product product = productRepository.findById(stockDTO.getProductId())
+                .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        // Check if the user already has the same product in their stock
         Date normalizedExpiry = normalizeExpiryDate(stockDTO.getExpiryDate());
-        Stock existingStock = stockRepository.findByUserAndProductAndBatchNoAndExpiryDate(user, product, stockDTO.getBatchNo(), normalizedExpiry);
+
+        Stock existingStock = stockRepository
+                .findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
+                        user, product, stockDTO.getBatchNo(), normalizedExpiry, stockDTO.getMrp()
+                ).orElse(null);
+
         Stock savedStock;
         if (existingStock != null) {
-
-        	// Convert both dates to LocalDate for comparison
-            LocalDate existingExpiryDate = existingStock.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            LocalDate dtoExpiryDate = stockDTO.getExpiryDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            
-            // Check if batch number and expiry date match
-            if (existingStock.getBatchNo().equals(stockDTO.getBatchNo()) && existingExpiryDate.equals(dtoExpiryDate)) {
-                // If the batch number and expiry date match, update the quantity
-                int newQuantity = existingStock.getQuantity() + stockDTO.getQuantity();
-                existingStock.setQuantity(newQuantity);
-                if (stockDTO.getMrp() != null) {
-                    existingStock.setMrp(stockDTO.getMrp());
-                }
-                savedStock = stockRepository.save(existingStock);
-            } else {
-                // If the batch number or expiry date is different, create a new stock entry
-                Stock stock = new Stock();
-                stock.setUser(user);
-                stock.setProduct(product);
-                stock.setQuantity(stockDTO.getQuantity());
-                stock.setBatchNo(stockDTO.getBatchNo());
-                stock.setExpiryDate(
-                        normalizeExpiryDate(stockDTO.getExpiryDate())
-                );
-                stock.setMrp(stockDTO.getMrp());
-                savedStock = stockRepository.save(stock);
-            }
+            existingStock.setQuantity(existingStock.getQuantity() + stockDTO.getQuantity());
+            savedStock = stockRepository.save(existingStock);
         } else {
-            // If the product does not exist in the user's stock, create a new stock entry
             Stock stock = new Stock();
             stock.setUser(user);
             stock.setProduct(product);
             stock.setQuantity(stockDTO.getQuantity());
             stock.setBatchNo(stockDTO.getBatchNo());
-            stock.setExpiryDate(
-                    normalizeExpiryDate(stockDTO.getExpiryDate())
-            );
+            stock.setExpiryDate(normalizedExpiry);
             stock.setMrp(stockDTO.getMrp());
             savedStock = stockRepository.save(stock);
         }
