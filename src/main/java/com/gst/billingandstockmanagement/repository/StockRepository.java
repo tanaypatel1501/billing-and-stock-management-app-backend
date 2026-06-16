@@ -15,6 +15,10 @@ public interface StockRepository extends JpaRepository<Stock, Long>, JpaSpecific
 
 	List<Stock> findByUser(User user);
 
+	Stock findByUserAndProductAndBatchNoAndExpiryDate(
+			User user, Product product, String batchNo, Date expiryDate
+	);
+
 	Optional<Stock> findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
 			User user, Product product, String batchNo, Date expiryDate, Double mrp
 	);
