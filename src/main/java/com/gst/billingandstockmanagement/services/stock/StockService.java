@@ -23,4 +23,6 @@ public interface StockService {
     void deleteStock(Long stockId);
 
     void sendExpiryAlerts();
+
+     Double getTotalInventoryValue(Long userId);
 }
