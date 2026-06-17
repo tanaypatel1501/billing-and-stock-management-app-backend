@@ -75,4 +75,9 @@ public class StockController {
         Page<Stock> p = stockService.searchWithPagination(request);
         return ResponseEntity.ok(p);
     }
+
+    @GetMapping("/user/{userId}/inventory-value")
+    public ResponseEntity<Double> getInventoryValue(@PathVariable Long userId) {
+        return ResponseEntity.ok(stockService.getTotalInventoryValue(userId));
+    }
 }

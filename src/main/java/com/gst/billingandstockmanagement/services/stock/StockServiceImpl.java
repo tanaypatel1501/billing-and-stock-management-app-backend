@@ -146,6 +146,20 @@ public class StockServiceImpl implements StockService {
         return stockRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
     }
 
+    @Override
+    public Double getTotalInventoryValue(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        List<Stock> allStock = stockRepository.findByUser(user);
+        return allStock.stream()
+                .mapToDouble(s -> {
+                    double mrp = s.getMrp() != null ? s.getMrp() :
+                            (s.getProduct().getMRP() != null ? s.getProduct().getMRP() : 0.0);
+                    return mrp * s.getQuantity();
+                })
+                .sum();
+    }
+
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")
     @Transactional
     public void sendExpiryAlerts() {
