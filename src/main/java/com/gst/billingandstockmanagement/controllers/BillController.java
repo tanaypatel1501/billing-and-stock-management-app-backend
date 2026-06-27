@@ -24,10 +24,9 @@ public class BillController {
 
 	@PostMapping("/add")
 	public ResponseEntity<BillDTO> addBill(@RequestBody BillDTO billDTO) {
-	    BillDTO createdBill = billService.addBill(billDTO);
+	    BillDTO createdBill = billService.submitBillWithItems(billDTO);
 	    return new ResponseEntity<>(createdBill, HttpStatus.CREATED);
 	}
-
     
     @GetMapping("/{billId}")
     public ResponseEntity<BillDTO> getBillById(@PathVariable Long billId) {

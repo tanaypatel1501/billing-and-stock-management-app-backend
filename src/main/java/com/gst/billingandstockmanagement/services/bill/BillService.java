@@ -8,7 +8,6 @@ import org.springframework.data.domain.Page;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
 
 public interface BillService {
-    BillDTO addBill(BillDTO billDTO);
 
 	void updateTotalAmount(Bill bill);
 
@@ -23,4 +22,6 @@ public interface BillService {
 	Page<Bill> searchWithPagination(SearchRequest request);
 
 	void updatePaidStatus(Long billId, boolean paid);
+
+	BillDTO submitBillWithItems(BillDTO billDTO);
 }

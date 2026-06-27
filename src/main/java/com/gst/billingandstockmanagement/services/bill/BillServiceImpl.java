@@ -1,17 +1,12 @@
 package com.gst.billingandstockmanagement.services.bill;
 
-import com.gst.billingandstockmanagement.repository.PurchaserRepository;
+import com.gst.billingandstockmanagement.entities.*;
+import com.gst.billingandstockmanagement.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.BillDTO;
 import com.gst.billingandstockmanagement.dto.BillItemsDTO;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
-import com.gst.billingandstockmanagement.entities.Bill;
-import com.gst.billingandstockmanagement.entities.BillItems;
-import com.gst.billingandstockmanagement.entities.User;
-import com.gst.billingandstockmanagement.repository.BillRepository;
-import com.gst.billingandstockmanagement.repository.UserRepository;
-import com.gst.billingandstockmanagement.repository.BillItemsRepository;
 import com.gst.billingandstockmanagement.utils.PaginationUtils;
 import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
 import java.util.List;
@@ -41,43 +36,11 @@ public class BillServiceImpl implements BillService {
     @Autowired
     private PurchaserRepository purchaserRepository;
 
-    @Override
-    public BillDTO addBill(BillDTO billDTO) {
-        // Fetch the User entity from the database using the userId
-        User user = userRepository.findById(billDTO.getUserId()).orElse(null);
+    @Autowired
+    private StockRepository stockRepository;
 
-        // Convert BillDTO to Bill entity
-        Bill bill = new Bill();
-        bill.setId(billDTO.getId());
-        bill.setUser(user);
-        bill.setPurchaserName(billDTO.getPurchaserName());
-        bill.setDl1(billDTO.getDl1());
-        bill.setDl2(billDTO.getDl2());
-        bill.setGstin(billDTO.getGstin());
-        bill.setInvoiceDate(billDTO.getInvoiceDate());
-        bill.setPaid(billDTO.isPaid());
-        if (billDTO.getPurchaserId() != null) {
-            purchaserRepository.findById(billDTO.getPurchaserId())
-                    .ifPresent(bill::setPurchaser);
-        }
-
-        // Save the Bill entity using billRepository
-        Bill savedBill = billRepository.save(bill);
-
-        // Calculate and update the total amount of the bill
-        updateTotalAmount(savedBill);
-        
-        BillDTO savedBillDTO = new BillDTO();
-        savedBillDTO.setId(savedBill.getId());
-        savedBillDTO.setUserId(savedBill.getUser().getId());
-        savedBillDTO.setPurchaserName(savedBill.getPurchaserName());
-        savedBillDTO.setDl1(savedBill.getDl1());
-        savedBillDTO.setDl2(savedBill.getDl2());
-        savedBillDTO.setGstin(savedBill.getGstin());
-        savedBillDTO.setInvoiceDate(savedBill.getInvoiceDate());
-
-        return savedBillDTO;
-    }
+    @Autowired
+    private StockLogRepository stockLogRepository;
 
     // Helper method to update the total amount of a bill
     public void updateTotalAmount(Bill bill) {
@@ -264,5 +227,91 @@ public class BillServiceImpl implements BillService {
                 .orElseThrow(() -> new RuntimeException("Bill not found: " + billId));
         bill.setPaid(paid);
         billRepository.save(bill);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public BillDTO submitBillWithItems(BillDTO billDTO) {
+        User user = userRepository.findById(billDTO.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + billDTO.getUserId()));
+
+        Bill bill = new Bill();
+        bill.setUser(user);
+        bill.setPurchaserName(billDTO.getPurchaserName());
+        bill.setDl1(billDTO.getDl1());
+        bill.setDl2(billDTO.getDl2());
+        bill.setGstin(billDTO.getGstin());
+        bill.setInvoiceDate(billDTO.getInvoiceDate());
+        bill.setPaid(false);
+        if (billDTO.getPurchaserId() != null) {
+            purchaserRepository.findById(billDTO.getPurchaserId()).ifPresent(bill::setPurchaser);
+        }
+        Bill savedBill = billRepository.save(bill);
+
+        double totalAmount = 0.0;
+
+        if (billDTO.getBillItems() != null) {
+            for (BillItemsDTO itemDTO : billDTO.getBillItems()) {
+                // Locks the row for the rest of this transaction — prevents two concurrent
+                // bills from both reading stale quantity and overselling the same batch
+                Stock stock = stockRepository.findByIdForUpdate(itemDTO.getStockId())
+                        .orElseThrow(() -> new RuntimeException("Stock not found: " + itemDTO.getStockId()));
+
+                int totalSold = itemDTO.getQuantity() + itemDTO.getFree();
+                if (totalSold > stock.getQuantity()) {
+                    throw new RuntimeException(
+                            "Insufficient stock for batch " + stock.getBatchNo() +
+                                    " (product: " + stock.getProduct().getName() + ")"
+                    );
+                }
+
+                Product product = stock.getProduct();
+
+                BillItems billItem = new BillItems();
+                billItem.setBill(savedBill);
+                billItem.setProduct(product);
+                billItem.setSnapshotProductName(product.getName());
+                billItem.setSnapshotPacking(product.getPacking());
+                billItem.setSnapshotHsn(product.getHSN());
+                billItem.setSnapshotCgst(product.getCGST());
+                billItem.setSnapshotSgst(product.getSGST());
+                billItem.setSnapshotUnitPrice(stock.getMrp() != null ? stock.getMrp() : product.getMRP());
+                billItem.setBatchNo(stock.getBatchNo());
+                billItem.setExpiryDate(stock.getExpiryDate());   // copied directly — no string round-trip
+                billItem.setQuantity(itemDTO.getQuantity());
+                billItem.setFree(itemDTO.getFree());
+                billItem.setRate(itemDTO.getRate());
+                billItem.setAmount(itemDTO.getAmount());
+                billItemsRepository.save(billItem);
+
+                stock.setQuantity(stock.getQuantity() - totalSold);
+                stockRepository.save(stock);
+
+                StockLog log = new StockLog();
+                log.setStock(stock);
+                log.setAction("SOLD");
+                log.setNotes(String.format(
+                        "Sold %d%s quantity to %s via <a class=\"bill-link\" data-bill-id=\"%d\">Bill #%d</a>",
+                        itemDTO.getQuantity(),
+                        itemDTO.getFree() > 0 ? " + " + itemDTO.getFree() + " free" : "",
+                        savedBill.getPurchaserName(),
+                        savedBill.getId(), savedBill.getId()
+                ));
+                log.setTimestamp(java.time.LocalDateTime.now());
+                stockLogRepository.save(log);
+
+                totalAmount += itemDTO.getAmount() != null ? itemDTO.getAmount() : 0.0;
+            }
+        }
+
+        savedBill.setTotalAmount(totalAmount);
+        billRepository.save(savedBill);
+
+        BillDTO result = new BillDTO();
+        result.setId(savedBill.getId());
+        result.setUserId(user.getId());
+        result.setPurchaserName(savedBill.getPurchaserName());
+        result.setTotalAmount(savedBill.getTotalAmount());
+        return result;
     }
 }

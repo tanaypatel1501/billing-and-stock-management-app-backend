@@ -10,6 +10,7 @@ public class BillItemsDTO {
     private Long id;
     private Long billId;
     private Long productId;
+    private Long stockId;
     private String snapshotProductName;
     private Double snapshotUnitPrice;
     private String snapshotPacking;
