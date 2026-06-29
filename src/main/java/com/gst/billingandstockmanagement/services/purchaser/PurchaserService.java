@@ -9,5 +9,5 @@ public interface PurchaserService {
     PurchaserDTO savePurchaser(PurchaserDTO dto);
     Page<PurchaserDTO> getPagedByUser(Long userId, String search, Pageable pageable);
     List<PurchaserDTO> searchByName(Long userId, String name);
-    void deletePurchaser(Long purchaserId);
+    void deletePurchaser(Long purchaserId, Long requestingUserId);
 }

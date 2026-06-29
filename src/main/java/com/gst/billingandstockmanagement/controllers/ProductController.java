@@ -1,10 +1,9 @@
 package com.gst.billingandstockmanagement.controllers;
 
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,16 +26,18 @@ import com.gst.billingandstockmanagement.services.product.ProductService;
 @RestController
 @RequestMapping("/api/product")
 public class ProductController {
-	
-	@Autowired
-	private ProductService productService;
-	
-	@PostMapping("/add")
+
+    @Autowired
+    private ProductService productService;
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/add")
     public ProductDTO addProduct(@RequestBody ProductDTO productDTO) {
         return productService.addProduct(productDTO);
     }
-	
-	@GetMapping("/all")
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all")
     public ResponseEntity<Page<Product>> getAllProducts(
             @RequestParam(name = "page", required = false, defaultValue = "0") int page,
             @RequestParam(name = "size", required = false, defaultValue = "20") int size
@@ -47,25 +48,25 @@ public class ProductController {
         Page<Product> p = productService.searchWithPagination(req);
         return ResponseEntity.ok(p);
     }
-	
-	@GetMapping("/{productId}")
+
+    @GetMapping("/{productId}")
     public ProductDTO getProductById(@PathVariable Long productId) {
-        // Use the ProductService to fetch a product by its ID
         return productService.getProductById(productId);
     }
-	
-	@DeleteMapping("/delete/{productId}")
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/delete/{productId}")
     public void deleteProductById(@PathVariable Long productId) {
-        // Use the ProductService to delete a product by its ID
         productService.deleteProductById(productId);
     }
-	
-	@PutMapping("/edit/{productId}")
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/edit/{productId}")
     public ProductDTO editProduct(@PathVariable Long productId, @RequestBody ProductDTO productDTO) {
-        // Use the ProductService to edit the product with the given ID
         return productService.editProduct(productId, productDTO);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping(path = "/bulk", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public BulkProductResponse uploadBulkProducts(@RequestParam("file") MultipartFile file) {
         return productService.handleBulkUpload(file);

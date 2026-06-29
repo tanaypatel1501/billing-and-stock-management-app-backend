@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.controllers;
 
 import com.gst.billingandstockmanagement.dto.ProductRequestDTO;
+import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.productrequest.ProductRequestService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,55 +18,28 @@ public class ProductRequestController {
     @Autowired
     private ProductRequestService productRequestService;
 
-    // ── USER ENDPOINTS ─────────────────────────────────────────
-
-    /**
-     * POST /api/product-requests/submit?userId={userId}
-     * Any authenticated user submits a new product request.
-     */
     @PostMapping("/submit")
-    public ResponseEntity<ProductRequestDTO> submit(
-            @RequestBody ProductRequestDTO dto,
-            @RequestParam Long userId) {
-        return ResponseEntity.ok(productRequestService.submitRequest(dto, userId));
+    public ResponseEntity<ProductRequestDTO> submit(@RequestBody ProductRequestDTO dto) {
+        return ResponseEntity.ok(productRequestService.submitRequest(dto, SecurityUtils.getCurrentUserId()));
     }
 
-    /**
-     * GET /api/product-requests/my?userId={userId}
-     * Returns all requests submitted by the given user.
-     */
     @GetMapping("/my")
-    public ResponseEntity<List<ProductRequestDTO>> myRequests(@RequestParam Long userId) {
-        return ResponseEntity.ok(productRequestService.getRequestsByUser(userId));
+    public ResponseEntity<List<ProductRequestDTO>> myRequests() {
+        return ResponseEntity.ok(productRequestService.getRequestsByUser(SecurityUtils.getCurrentUserId()));
     }
 
-    // ── ADMIN ENDPOINTS ────────────────────────────────────────
-
-    /**
-     * GET /api/product-requests/pending
-     * Admin: list only PENDING requests.
-     */
     @GetMapping("/pending")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProductRequestDTO>> pending() {
         return ResponseEntity.ok(productRequestService.getPendingRequests());
     }
 
-    /**
-     * GET /api/product-requests/all
-     * Admin: list all requests (any status).
-     */
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ProductRequestDTO>> all() {
         return ResponseEntity.ok(productRequestService.getAllRequests());
     }
 
-    /**
-     * POST /api/product-requests/{id}/approve
-     * Admin approves a request.
-     * Body (optional): { "adminNotes": "Looks good!" }
-     */
     @PostMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductRequestDTO> approve(
@@ -75,11 +49,6 @@ public class ProductRequestController {
         return ResponseEntity.ok(productRequestService.approveRequest(id, notes));
     }
 
-    /**
-     * POST /api/product-requests/{id}/reject
-     * Admin rejects a request.
-     * Body (optional): { "adminNotes": "Already exists under different name." }
-     */
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductRequestDTO> reject(

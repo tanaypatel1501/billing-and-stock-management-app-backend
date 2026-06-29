@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 
 public interface StockRepository extends JpaRepository<Stock, Long>, JpaSpecificationExecutor<Stock> {
@@ -33,4 +34,12 @@ public interface StockRepository extends JpaRepository<Stock, Long>, JpaSpecific
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select s from Stock s where s.id = :id")
 	Optional<Stock> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
+
+	@Query("""
+		select coalesce(sum(coalesce(s.mrp, p.MRP, 0.0) * s.quantity), 0.0)
+		from Stock s
+		join s.product p
+		where s.user.id = :userId
+	""")
+	Double calculateInventoryValueForUser(@Param("userId") Long userId);
 }

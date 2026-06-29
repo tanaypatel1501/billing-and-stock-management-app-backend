@@ -1,8 +1,7 @@
 package com.gst.billingandstockmanagement.services.jwt;
 
-import java.util.List;
+import com.gst.billingandstockmanagement.security.CustomUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -24,17 +23,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Username not found: " + username);
         }
 
-        // Extract the role string (handles both Enum and String types safely)
-        String roleName = user.getUserRole() != null ? user.getUserRole().toString() : "USER";
-
-        // Create the authority wrapper.
-        // We prepend "ROLE_" so that @PreAuthorize("hasRole('ADMIN')") works correctly out of the box.
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + roleName);
-
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                List.of(authority)
-        );
+        return new CustomUserDetails(user);
     }
 }

@@ -6,7 +6,6 @@ import lombok.Data;
 
 @Data
 public class DetailsDTO {
-	   	private Long userId; 
 	    private String name;
 	    private String addressLine1;
 	    private String addressLine2;

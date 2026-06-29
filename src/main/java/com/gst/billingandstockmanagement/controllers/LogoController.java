@@ -2,13 +2,13 @@ package com.gst.billingandstockmanagement.controllers;
 
 import com.gst.billingandstockmanagement.entities.Details;
 import com.gst.billingandstockmanagement.repository.DetailsRepository;
+import com.gst.billingandstockmanagement.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import software.amazon.awssdk.core.ResponseBytes;
@@ -25,19 +25,22 @@ public class LogoController {
     @Autowired
     private S3Client s3Client;
 
+    @Autowired
+    private DetailsRepository detailsRepository;
+
     @Value("${tebi.bucket}")
     private String bucketName;
 
     @Value("${branding.default-logo-url}")
     private String defaultLogoUrl;
 
-    @GetMapping("/logo/{userId}")
-    public ResponseEntity<byte[]> getLogo(@PathVariable Long userId,
-                                          DetailsRepository detailsRepository) {
+    @GetMapping("/logo")
+    public ResponseEntity<byte[]> getLogo() {
         try {
-            String logoUrl = defaultLogoUrl; // fallback from the start
+            Long currentUserId = SecurityUtils.getCurrentUserId();
+            String logoUrl = defaultLogoUrl;
 
-            Details details = detailsRepository.findByUserId(userId).orElse(null);
+            Details details = detailsRepository.findByUserId(currentUserId).orElse(null);
             if (details != null && details.getLogoUrl() != null && !details.getLogoUrl().isEmpty()) {
                 logoUrl = details.getLogoUrl();
             }

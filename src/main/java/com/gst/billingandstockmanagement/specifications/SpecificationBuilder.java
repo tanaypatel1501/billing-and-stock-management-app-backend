@@ -8,6 +8,7 @@ import java.util.Map;
 
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.From;
+import jakarta.persistence.criteria.JoinType;
 
 public class SpecificationBuilder<T> {
 
@@ -39,7 +40,14 @@ public class SpecificationBuilder<T> {
                                 }
                             }
                         }
-                        return cb.equal(path.as(String.class), val);
+                        Class<?> javaType = path.getJavaType();
+                        if (Long.class.isAssignableFrom(javaType) || long.class.equals(javaType)) {
+                            return cb.equal(path, Long.parseLong(val));
+                        } else if (Integer.class.isAssignableFrom(javaType) || int.class.equals(javaType)) {
+                            return cb.equal(path, Integer.parseInt(val));
+                        } else {
+                            return cb.equal(path.as(String.class), val);
+                        }
                     } catch (Exception ex) {
                         return cb.conjunction();
                     }
@@ -52,5 +60,20 @@ public class SpecificationBuilder<T> {
         Specification<T> result = specs.get(0);
         for (int i = 1; i < specs.size(); i++) result = result.and(specs.get(i));
         return result;
+    }
+
+    public Specification<T> withFetch(Specification<T> base, String... toOnePaths) {
+        if (toOnePaths == null || toOnePaths.length == 0) return base;
+
+        Specification<T> fetchSpec = (root, query, cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                for (String path : toOnePaths) {
+                    root.fetch(path, JoinType.LEFT);
+                }
+            }
+            return cb.conjunction();
+        };
+
+        return base == null ? fetchSpec : base.and(fetchSpec);
     }
 }

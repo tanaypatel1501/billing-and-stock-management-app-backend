@@ -182,6 +182,8 @@ public class BillServiceImpl implements BillService {
         if (dateSpec != null)      finalSpec = finalSpec.and(dateSpec);
         if (purchaserSpec != null) finalSpec = finalSpec.and(purchaserSpec);
 
+        finalSpec = builder.withFetch(finalSpec, "user");
+
         return billRepository.findAll(finalSpec, pageable);
     }
 

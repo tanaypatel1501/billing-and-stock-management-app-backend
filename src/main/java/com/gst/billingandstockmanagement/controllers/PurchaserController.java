@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.controllers;
 
 import com.gst.billingandstockmanagement.dto.PurchaserDTO;
+import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.purchaser.PurchaserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,30 +22,28 @@ public class PurchaserController {
 
     @PostMapping("/save")
     public ResponseEntity<PurchaserDTO> savePurchaser(@RequestBody PurchaserDTO dto) {
+        dto.setUserId(SecurityUtils.getCurrentUserId());
         return ResponseEntity.ok(purchaserService.savePurchaser(dto));
     }
 
     @GetMapping("/page")
     public ResponseEntity<Page<PurchaserDTO>> getPaged(
-            @RequestParam Long userId,
             @RequestParam(defaultValue = "") String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
-        return ResponseEntity.ok(purchaserService.getPagedByUser(userId, search, pageable));
+        return ResponseEntity.ok(purchaserService.getPagedByUser(SecurityUtils.getCurrentUserId(), search, pageable));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<PurchaserDTO>> search(
-            @RequestParam Long userId,
-            @RequestParam String name) {
-        return ResponseEntity.ok(purchaserService.searchByName(userId, name));
+    public ResponseEntity<List<PurchaserDTO>> search(@RequestParam String name) {
+        return ResponseEntity.ok(purchaserService.searchByName(SecurityUtils.getCurrentUserId(), name));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        purchaserService.deletePurchaser(id);
+        purchaserService.deletePurchaser(id, SecurityUtils.getCurrentUserId());
         return ResponseEntity.noContent().build();
     }
 }
