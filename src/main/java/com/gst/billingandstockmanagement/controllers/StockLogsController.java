@@ -1,7 +1,9 @@
 package com.gst.billingandstockmanagement.controllers;
 
+import com.gst.billingandstockmanagement.dto.StockDTO;
 import com.gst.billingandstockmanagement.dto.StockLogDTO;
-
+import com.gst.billingandstockmanagement.security.SecurityUtils;
+import com.gst.billingandstockmanagement.services.stock.StockService;
 import com.gst.billingandstockmanagement.services.stocklogs.StockLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -20,27 +22,33 @@ public class StockLogsController {
     @Autowired
     private StockLogService stockLogService;
 
+    @Autowired
+    private StockService stockService;
+
     @PostMapping
     public ResponseEntity<StockLogDTO> createLog(@RequestBody StockLogDTO stockLogDTO) {
+        StockDTO stock = stockService.getStockById(stockLogDTO.getStockId());
+        SecurityUtils.requireOwnership(stock.getUserId());
         StockLogDTO savedLog = stockLogService.addLog(stockLogDTO);
         return new ResponseEntity<>(savedLog, HttpStatus.CREATED);
     }
 
     @GetMapping("/{stockId}")
     public ResponseEntity<List<StockLogDTO>> getStockHistory(@PathVariable Long stockId) {
+        StockDTO stock = stockService.getStockById(stockId);
+        SecurityUtils.requireOwnership(stock.getUserId());
         List<StockLogDTO> logs = stockLogService.getLogsByStockId(stockId);
         return ResponseEntity.ok(logs);
     }
 
-    @GetMapping("/user/{userId}")
+    @GetMapping("/user")
     public ResponseEntity<Page<StockLogDTO>> getLogsByUser(
-            @PathVariable Long userId,
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "30") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<StockLogDTO> result = stockLogService.getLogsByUserId(userId, search, pageable);
+        Page<StockLogDTO> result = stockLogService.getLogsByUserId(SecurityUtils.getCurrentUserId(), search, pageable);
         return ResponseEntity.ok(result);
     }
 }

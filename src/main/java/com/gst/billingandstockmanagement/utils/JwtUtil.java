@@ -26,6 +26,9 @@ public class JwtUtil {
             throw new IllegalStateException("Environment variable JWT_SECRET not set!");
         }
     }
+
+    private final Key signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(SECRET));
+
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
     }
@@ -57,9 +60,11 @@ public class JwtUtil {
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
-    public String generateToken(String userName){
-        Map<String,Object> claims=new HashMap<>();
-        return createToken(claims,userName);
+    public String generateToken(String userName, Long userId, String role){
+        Map<String,Object> claims = new HashMap<>();
+        claims.put("userId", userId);
+        claims.put("role", role);
+        return createToken(claims, userName);
     }
 
     private String createToken(Map<String, Object> claims, String userName) {
@@ -72,8 +77,7 @@ public class JwtUtil {
     }
 
     private Key getSignKey() {
-        byte[] keyBytes= Decoders.BASE64.decode(SECRET);
-        return Keys.hmacShaKeyFor(keyBytes);
+        return signingKey;
     }
     
     @Value("${jwt.refreshExpirationMs}") // Define this property in your application.properties or application.yml

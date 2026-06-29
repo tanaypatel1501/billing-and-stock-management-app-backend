@@ -41,6 +41,7 @@ public class Bill {
 	private boolean paid = false;
 
 	@OneToMany(mappedBy = "bill", cascade = CascadeType.REMOVE)
+	@JsonIgnore
 	private List<BillItems> billItems;
 
 	@JsonIgnore

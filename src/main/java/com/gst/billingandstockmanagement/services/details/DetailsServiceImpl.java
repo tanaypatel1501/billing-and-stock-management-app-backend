@@ -1,19 +1,16 @@
 package com.gst.billingandstockmanagement.services.details;
 
-import com.gst.billingandstockmanagement.utils.LogoStorageService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import com.gst.billingandstockmanagement.dto.DetailsDTO;
 import com.gst.billingandstockmanagement.entities.Details;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.DetailsRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
+import com.gst.billingandstockmanagement.security.SecurityUtils;
+import com.gst.billingandstockmanagement.utils.LogoStorageService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class DetailsServiceImpl implements DetailsService {
@@ -27,15 +24,14 @@ public class DetailsServiceImpl implements DetailsService {
     @Autowired
     private LogoStorageService logoStorageService;
 
-
     @Value("${branding.default-logo-url}")
     private String defaultLogoUrl;
 
     @Override
-    public DetailsDTO createDetails(Long userId, DetailsDTO detailsDTO, MultipartFile logo) {
+    public DetailsDTO createDetails(DetailsDTO detailsDTO, MultipartFile logo) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = getCurrentUser();
+        Long userId = user.getId();
 
         Details details = new Details();
         details.setUser(user);
@@ -54,12 +50,13 @@ public class DetailsServiceImpl implements DetailsService {
     }
 
     @Override
-    public DetailsDTO updateDetails(Long userId, DetailsDTO detailsDTO, MultipartFile logo) {
+    public DetailsDTO updateDetails(DetailsDTO detailsDTO, MultipartFile logo) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = getCurrentUser();
+        Long userId = user.getId();
 
         Details details = user.getDetails();
+
         if (details == null) {
             details = new Details();
             details.setUser(user);
@@ -79,42 +76,33 @@ public class DetailsServiceImpl implements DetailsService {
     }
 
     @Override
-    public void deleteDetails(Long userId) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            Details details = user.getDetails();
-            if (details != null) {
-                detailsRepository.delete(details);
-                user.setDetails(null);
-                userRepository.save(user);
-            }
+    public void deleteDetails() {
+
+        User user = getCurrentUser();
+
+        Details details = user.getDetails();
+
+        if (details != null) {
+            detailsRepository.delete(details);
+            user.setDetails(null);
+            userRepository.save(user);
         }
     }
 
     @Override
-    public DetailsDTO getDetailsByUserId(Long userId) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isPresent()) {
-            User user = optionalUser.get();
-            Details details = user.getDetails();
-            if (details != null) {
-                return mapDetailsToDetailsDTO(details);
-            }
-        }
-        return null;
+    public DetailsDTO getDetailsByUserId() {
+
+        User user = getCurrentUser();
+
+        Details details = user.getDetails();
+
+        return details != null ? mapDetailsToDetailsDTO(details) : null;
     }
 
-    @Override
-    public DetailsDTO getDetailsById(Long id) {
-        Optional<Details> optionalDetails = detailsRepository.findById(id);
-        return optionalDetails.map(this::mapDetailsToDetailsDTO).orElse(null);
-    }
-
-    @Override
-    public List<DetailsDTO> getAllDetails() {
-        List<Details> detailsList = detailsRepository.findAll();
-        return detailsList.stream().map(this::mapDetailsToDetailsDTO).collect(Collectors.toList());
+    private User getCurrentUser() {
+        Long userId = SecurityUtils.getCurrentUserId();
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     private void mapDetailsDTOToDetails(DetailsDTO detailsDTO, Details details) {
@@ -136,12 +124,13 @@ public class DetailsServiceImpl implements DetailsService {
         details.setUpiId(detailsDTO.getUpiId());
         details.setShowQrOnBill(detailsDTO.isShowQrOnBill());
         details.setTaxMode(detailsDTO.getTaxMode() != null ? detailsDTO.getTaxMode() : "CGST_SGST");
-        details.setPreferredTemplate(detailsDTO.getPreferredTemplate() != null ? detailsDTO.getPreferredTemplate() : "template1");
+        details.setPreferredTemplate(detailsDTO.getPreferredTemplate() != null
+                ? detailsDTO.getPreferredTemplate()
+                : "template1");
     }
 
     private DetailsDTO mapDetailsToDetailsDTO(Details details) {
         DetailsDTO dto = new DetailsDTO();
-        dto.setUserId(details.getUser().getId());
         dto.setName(details.getName());
         dto.setAddressLine1(details.getAddressLine1());
         dto.setAddressLine2(details.getAddressLine2());
@@ -164,4 +153,3 @@ public class DetailsServiceImpl implements DetailsService {
         return dto;
     }
 }
-			

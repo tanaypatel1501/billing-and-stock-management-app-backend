@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -143,21 +144,19 @@ public class StockServiceImpl implements StockService {
         SpecificationBuilder<Stock> builder = new SpecificationBuilder<>();
         List<String> fields = List.of("batchNo", "product.name", "product.HSN");
         Pageable pageable = PaginationUtils.getPageable(request);
-        return stockRepository.findAll(builder.build(request.getSearchText(), fields, request.getFilters()), pageable);
+
+        Specification<Stock> spec = builder.build(request.getSearchText(), fields, request.getFilters());
+        spec = builder.withFetch(spec, "product");
+
+        return stockRepository.findAll(spec, pageable);
     }
 
     @Override
     public Double getTotalInventoryValue(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        List<Stock> allStock = stockRepository.findByUser(user);
-        return allStock.stream()
-                .mapToDouble(s -> {
-                    double mrp = s.getMrp() != null ? s.getMrp() :
-                            (s.getProduct().getMRP() != null ? s.getProduct().getMRP() : 0.0);
-                    return mrp * s.getQuantity();
-                })
-                .sum();
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found");
+        }
+        return stockRepository.calculateInventoryValueForUser(userId);
     }
 
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")

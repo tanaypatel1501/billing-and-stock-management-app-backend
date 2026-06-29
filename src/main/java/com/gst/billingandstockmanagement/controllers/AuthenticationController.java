@@ -6,6 +6,7 @@ import java.util.Map;
 import com.gst.billingandstockmanagement.dto.ForgotPasswordRequestDTO;
 import com.gst.billingandstockmanagement.dto.ResetPasswordDTO;
 import com.gst.billingandstockmanagement.services.resetpassword.PasswordResetService;
+import com.gst.billingandstockmanagement.security.CustomUserDetails;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,15 +19,14 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
 
 import com.gst.billingandstockmanagement.dto.AuthenticationRequest;
-import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.UserRepository;
 import com.gst.billingandstockmanagement.services.user.UserService;
 import com.gst.billingandstockmanagement.utils.JwtUtil;
@@ -57,21 +57,23 @@ public class AuthenticationController {
 
     @PostMapping("/authenticate")
     public void createAuthenticationToken(@RequestBody AuthenticationRequest authenticationRequest, HttpServletResponse response) throws BadCredentialsException, DisabledException, UsernameNotFoundException, IOException, JSONException, ServletException {
+        Authentication authentication;
         try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword()));
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(authenticationRequest.getUsername(), authenticationRequest.getPassword())
+            );
         } catch (BadCredentialsException e) {
             throw new BadCredentialsException("Incorrect username or password.");
         } catch (DisabledException disabledException) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND, "User is not activated");
             return;
         }
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(authenticationRequest.getUsername());
-        User user = userRepository.findFirstByEmail(userDetails.getUsername());
-        final String jwt = jwtUtil.generateToken(userDetails.getUsername());
+
+        final CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        final String jwt = jwtUtil.generateToken(userDetails.getUsername(), userDetails.getId(), userDetails.getRole());
 
         response.getWriter().write(new JSONObject()
-                .put("userId", user.getId())
-                .put("role", user.getUserRole())
+                .put("message", "Login successful")
                 .toString()
         );
         response.addHeader("Access-Control-Expose-Headers", "Authorization");

@@ -7,6 +7,7 @@ import com.gst.billingandstockmanagement.repository.BillRepository;
 import com.gst.billingandstockmanagement.repository.PurchaserRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,7 +36,10 @@ public class PurchaserServiceImpl implements PurchaserService {
 
         if (dto.getId() != null) {
             purchaser = purchaserRepository.findById(dto.getId())
-                    .orElse(new Purchaser());
+                    .orElseThrow(() -> new RuntimeException("Purchaser not found"));
+            if (!purchaser.getUser().getId().equals(dto.getUserId())) {
+                throw new AccessDeniedException("You do not have access to this purchaser.");
+            }
         } else {
             List<Purchaser> existing = purchaserRepository
                     .findByUserAndNameContainingIgnoreCase(user, dto.getName())
@@ -81,7 +85,12 @@ public class PurchaserServiceImpl implements PurchaserService {
     }
 
     @Override
-    public void deletePurchaser(Long purchaserId) {
+    public void deletePurchaser(Long purchaserId, Long requestingUserId) {
+        Purchaser purchaser = purchaserRepository.findById(purchaserId)
+                .orElseThrow(() -> new RuntimeException("Purchaser not found"));
+        if (!purchaser.getUser().getId().equals(requestingUserId)) {
+            throw new AccessDeniedException("You do not have access to this purchaser.");
+        }
         billRepository.nullifyPurchaserReference(purchaserId);
         purchaserRepository.deleteById(purchaserId);
     }
