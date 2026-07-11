@@ -45,7 +45,10 @@ public class WebSecurityConfiguration {
                                 "/sign-up",
                                 "/refresh-token",
                                 "/forgot-password",
-                                "/reset-password"
+                                "/reset-password",
+                                "/verify-email",
+                                "/resend-verification",
+                                "/auth/google"
                         ).permitAll()
 
                         // Product-request endpoints:

@@ -34,6 +34,9 @@ gmail:
   refresh-token: ${GMAIL_REFRESH_TOKEN}
   from-email: gstmedicose@gmail.com
 
+google:
+  client-id: ${GOOGLE_CLIENT_ID}
+
 app:
   client:
     url: ${CLIENT_URL}

@@ -70,6 +70,17 @@ public class AuthenticationController {
         }
 
         final CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        if (!userDetails.isEmailVerified()) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write(new JSONObject()
+                    .put("error", "EMAIL_NOT_VERIFIED")
+                    .put("message", "Please verify your email before logging in.")
+                    .toString());
+            return;
+        }
+
         final String jwt = jwtUtil.generateToken(userDetails.getUsername(), userDetails.getId(), userDetails.getRole());
 
         response.getWriter().write(new JSONObject()

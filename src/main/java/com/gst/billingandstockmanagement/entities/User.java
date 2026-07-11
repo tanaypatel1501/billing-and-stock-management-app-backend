@@ -7,6 +7,8 @@ import lombok.Setter;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -26,6 +28,13 @@ public class User {
     private String password;
     @Enumerated(EnumType.STRING)
     private UserRole userRole;
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean emailVerified = false;
+    private String verificationToken;
+    private LocalDateTime verificationTokenExpiry;
+    @Column(nullable = true)
+    private String googleId;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Details details;
