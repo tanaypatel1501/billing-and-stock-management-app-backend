@@ -18,5 +18,13 @@ public interface UserService {
     UserDTO getProfile(String email);
 
     UserDTO updateProfile(String email, UpdateProfileDTO updateProfileDTO);
+
+    User getUserByEmail(String email);
+
+    String createVerificationToken(String email);
+
+    boolean verifyEmail(String token);
+
+    User findOrCreateGoogleUser(String email, String firstname, String lastname, String googleId);
 }
 

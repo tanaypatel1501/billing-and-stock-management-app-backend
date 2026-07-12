@@ -1,6 +1,8 @@
 package com.gst.billingandstockmanagement.services.user;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -115,5 +117,65 @@ public class UserServiceImpl implements UserService {
         userDTO.setEmail(updatedUser.getEmail());
         userDTO.setUserRole(updatedUser.getUserRole());
         return userDTO;
+    }
+
+    @Override
+    public User getUserByEmail(String email) {
+        return userRepository.findFirstByEmail(email);
+    }
+
+    @Override
+    public String createVerificationToken(String email) {
+        User user = userRepository.findFirstByEmail(email);
+        if (user == null) return null;
+
+        String token = UUID.randomUUID().toString();
+        user.setVerificationToken(token);
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+        return token;
+    }
+
+    @Override
+    public boolean verifyEmail(String token) {
+        Optional<User> opt = userRepository.findByVerificationToken(token);
+        if (opt.isEmpty()) return false;
+
+        User user = opt.get();
+        if (user.getVerificationTokenExpiry() == null ||
+                user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            return false; // token expired
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        userRepository.save(user);
+        return true;
+    }
+
+    @Override
+    public User findOrCreateGoogleUser(String email, String firstname, String lastname, String googleId) {
+
+        User user = userRepository.findFirstByEmail(email);
+
+        if (user != null) {
+            if (user.getGoogleId() == null) {
+                user.setGoogleId(googleId);
+                user.setEmailVerified(true);
+                userRepository.save(user);
+            }
+            return user;
+        }
+
+        User newUser = new User();
+        newUser.setEmail(email);
+        newUser.setFirstname(firstname);
+        newUser.setLastname(lastname != null ? lastname : "");
+        newUser.setGoogleId(googleId);
+        newUser.setEmailVerified(true);
+        newUser.setUserRole(UserRole.USER);
+        newUser.setPassword(new BCryptPasswordEncoder().encode(UUID.randomUUID().toString()));
+        return userRepository.save(newUser);
     }
 }

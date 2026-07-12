@@ -14,16 +14,19 @@ public class CustomUserDetails implements UserDetails {
     private final String email;
     private final String password;
     private final String role;
+    private final boolean emailVerified;
 
     public CustomUserDetails(User user) {
         this.id = user.getId();
         this.email = user.getEmail();
         this.password = user.getPassword();
         this.role = user.getUserRole() != null ? user.getUserRole().toString() : "USER";
+        this.emailVerified = user.isEmailVerified();
     }
 
     public Long getId() { return id; }
     public String getRole() { return role; }
+    public boolean isEmailVerified() { return emailVerified; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
