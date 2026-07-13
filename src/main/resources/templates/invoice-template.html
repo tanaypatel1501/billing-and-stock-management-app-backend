@@ -9,7 +9,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Noto Sans', Arial, Helvetica, sans-serif;
             font-size: 11px;
             color: #000;
             background: #fff;
@@ -165,10 +165,16 @@
         }
 
         .invoice-table td {
-            border: 1px solid #000;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
             padding: 5px 4px;
             text-align: left;
             vertical-align: top;
+        }
+
+        .invoice-table tr.filler-row td {
+            height: 20px;
+            padding: 5px 4px;
         }
 
         .product-name { font-weight: 600; }
@@ -278,16 +284,39 @@
 
         .qr-image { width: 70px; height: 70px; }
         .qr-label { font-size: 8px; color: #555; display: block; margin: 2px 0; }
-        .total-amount { font-size: 13px; font-weight: 800; white-space: nowrap; }
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+        .totals-table td {
+            border: none;
+            padding: 1px 4px;
+        }
+        .totals-table .t-label { text-align: left; color: #555; }
+        .totals-table .t-value { text-align: right; font-weight: 700; }
+        .totals-table .grand-total td {
+            border-top: 1px solid #000;
+            padding-top: 3px;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .totals-table .discount-row .t-value {
+            color: #d32f2f;
+        }
     </style>
 </head>
 <body>
-<div class="invoice-content">
+<div class="invoice-content"
+     th:with="subtotal=${#aggregates.sum(bill.billItems.![rate * quantity])},
+              discountTotal=${#aggregates.sum(bill.billItems.![free * rate])},
+              cgstTotal=${#aggregates.sum(bill.billItems.![rate * quantity * snapshotCgst / 100.0])},
+              sgstTotal=${#aggregates.sum(bill.billItems.![rate * quantity * snapshotSgst / 100.0])}">
 
     <div class="print-title">INVOICE</div>
 
-    <!-- ── TOP SECTION ── -->
-    <div class="invoice-top-section">
+        <!-- ── TOP SECTION ── -->
+        <div class="invoice-top-section">
         <div class="logo-section">
             <img th:if="${logoBase64 != null}" th:src="${logoBase64}" class="business-logo" alt="Logo"/>
         </div>
@@ -376,8 +405,8 @@
         </div>
     </div>
 
-    <!-- ── ITEMS TABLE ── -->
-    <div class="table-container">
+        <!-- ── ITEMS TABLE ── -->
+        <div class="table-container">
         <table class="invoice-table">
             <thead>
             <tr>
@@ -416,12 +445,28 @@
                 <td th:unless="${taxMode == 'IGST'}" th:text="${item.snapshotSgst} + '%'"></td>
                 <td class="amount" th:text="'₹' + ${#numbers.formatDecimal(item.amount, 1, 2)}"></td>
             </tr>
+            <tr th:each="i : ${fillerRows}" class="filler-row">
+                <td>&nbsp;</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td th:if="${taxMode == 'IGST'}"></td>
+                <td th:unless="${taxMode == 'IGST'}"></td>
+                <td th:unless="${taxMode == 'IGST'}"></td>
+                <td></td>
+            </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- ── FOOTER FIXED ── -->
-    <div class="invoice-footer">
+        <!-- ── FOOTER FIXED ── -->
+        <div class="invoice-footer">
         <div class="footer-left">
             <div class="footer-left-wrapper">
                 <div class="footer-top-row">
@@ -453,12 +498,62 @@
                         <span class="qr-label" th:text="${details.upiId}"></span>
                     </div>
                     <div class="total-half">
-                        <div class="total-amount" th:text="'Total: ₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></div>
+                        <table class="totals-table">
+                            <tr>
+                                <td class="t-label">Subtotal</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(subtotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:if="${discountTotal > 0}" class="discount-row">
+                                <td class="t-label">Discount</td>
+                                <td class="t-value" th:text="'-₹' + ${#numbers.formatDecimal(discountTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:if="${taxMode == 'IGST'}">
+                                <td class="t-label">IGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(cgstTotal + sgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:unless="${taxMode == 'IGST'}">
+                                <td class="t-label">CGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(cgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:unless="${taxMode == 'IGST'}">
+                                <td class="t-label">SGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(sgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr class="grand-total">
+                                <td class="t-label">Total</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></td>
+                            </tr>
+                        </table>
                     </div>
                 </th:block>
                 <th:block th:unless="${showQr and qrCodeBase64 != null}">
                     <div class="footer-total-only">
-                        <div class="total-amount" th:text="'Total: ₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></div>
+                        <table class="totals-table">
+                            <tr>
+                                <td class="t-label">Subtotal</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(subtotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:if="${discountTotal > 0}" class="discount-row">
+                                <td class="t-label">Discount</td>
+                                <td class="t-value" th:text="'-₹' + ${#numbers.formatDecimal(discountTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:if="${taxMode == 'IGST'}">
+                                <td class="t-label">IGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(cgstTotal + sgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:unless="${taxMode == 'IGST'}">
+                                <td class="t-label">CGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(cgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr th:unless="${taxMode == 'IGST'}">
+                                <td class="t-label">SGST</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(sgstTotal, 1, 2)}"></td>
+                            </tr>
+                            <tr class="grand-total">
+                                <td class="t-label">Total</td>
+                                <td class="t-value" th:text="'₹' + ${#numbers.formatDecimal(bill.totalAmount, 1, 2)}"></td>
+                            </tr>
+                        </table>
                     </div>
                 </th:block>
             </div>
