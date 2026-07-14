@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.services.pdf;
 
 import com.gst.billingandstockmanagement.entities.Bill;
+import com.gst.billingandstockmanagement.entities.BillItems;
 import com.gst.billingandstockmanagement.entities.Details;
 import com.gst.billingandstockmanagement.repository.BillRepository;
 import com.gst.billingandstockmanagement.repository.DetailsRepository;
@@ -26,8 +27,11 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.IntStream;
 
 import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -61,15 +65,18 @@ public class PdfServiceImpl implements PdfService {
     @Value("${branding.default-logo-url}")
     private String defaultLogoUrl;
 
-    // ── Page-fill spacer estimates (mm). Print a 1-item and a 10-item bill,
-    // measure any gap/overflow, and nudge these. Row height shifts a bit if
-    // a product name wraps to two lines.
-    private static final double TOTAL_CONTENT_MM = 197.0;
-    private static final double TITLE_MM = 12.0;
-    private static final double TOP_SECTION_MM = 58.0;
-    private static final double TABLE_HEADER_MM = 8.0;
-    private static final double ROW_MM = 8.0;
-    private static final double FOOTER_MM = 32.0;
+    private static final double T1_TOTAL_CONTENT_MM = 197.0;
+    private static final double T1_TITLE_MM = 12.0;
+    private static final double T1_TOP_SECTION_MM = 58.0;
+    private static final double T1_TABLE_HEADER_MM = 8.0;
+    private static final double T1_ROW_MM = 8.0;
+    private static final double T1_FOOTER_MM = 32.0;
+
+    private static final double T2_TOTAL_CONTENT_MM = 273.0;
+    private static final double T2_HEADER_STACK_MM = 84.0;
+    private static final double T2_TABLE_HEADER_MM = 8.0;
+    private static final double T2_ROW_MM = 7.0;
+    private static final double T2_FOOTER_MM = 45.0;
 
     // ── In-memory logo cache: avoids hitting S3 on every single PDF render.
     private static final Duration LOGO_CACHE_TTL = Duration.ofMinutes(30);
@@ -81,8 +88,23 @@ public class PdfServiceImpl implements PdfService {
         }
     }
 
-    // ── Resolved once and reused: avoids re-extracting/re-locating the font
-    // file on every single PDF render.
+    private record InvoiceTotals(double subtotal, double discountTotal, double cgstTotal, double sgstTotal) {}
+
+    private InvoiceTotals computeTotals(Bill bill) {
+        double subtotal = 0, discount = 0, cgst = 0, sgst = 0;
+        List<BillItems> items = bill.getBillItems();
+        if (items != null) {
+            for (BillItems item : items) {
+                double lineBase = item.getRate() * item.getQuantity();
+                subtotal += lineBase;
+                discount += item.getFree() * item.getRate();
+                cgst += lineBase * item.getSnapshotCgst() / 100.0;
+                sgst += lineBase * item.getSnapshotSgst() / 100.0;
+            }
+        }
+        return new InvoiceTotals(subtotal, discount, cgst, sgst);
+    }
+
     private volatile String cachedFontPath;
 
     @Override
@@ -107,16 +129,25 @@ public class PdfServiceImpl implements PdfService {
         context.setVariable("details", details);
         context.setVariable("totalAmountInWords", numberToWordsConverter.convert(bill.getTotalAmount()));
 
-        // ── Page-fill spacer: pushes the footer to the bottom of the page
-        // when there are only 1-2 items, so the invoice doesn't look half-empty.
+        InvoiceTotals totals = computeTotals(bill);
+        context.setVariable("subtotal", totals.subtotal());
+        context.setVariable("discountTotal", totals.discountTotal());
+        context.setVariable("cgstTotal", totals.cgstTotal());
+        context.setVariable("sgstTotal", totals.sgstTotal());
+
+        String templateName = "template1".equals(details.getPreferredTemplate())
+                ? "invoice-template"
+                : "invoice-template-2";
+
         int itemCount = bill.getBillItems() != null ? bill.getBillItems().size() : 0;
-        double used = TITLE_MM + TOP_SECTION_MM + TABLE_HEADER_MM
-                + (itemCount * ROW_MM) + FOOTER_MM;
-        double remainingMm = Math.max(0, TOTAL_CONTENT_MM - used);
-        int fillerRowCount = (int) Math.floor(remainingMm / ROW_MM);
+        int fillerRowCount = "invoice-template".equals(templateName)
+                ? computeFillerRows(itemCount, T1_TOTAL_CONTENT_MM, T1_TITLE_MM + T1_TOP_SECTION_MM, T1_TABLE_HEADER_MM, T1_ROW_MM, T1_FOOTER_MM)
+                : computeFillerRows(itemCount, T2_TOTAL_CONTENT_MM, T2_HEADER_STACK_MM, T2_TABLE_HEADER_MM, T2_ROW_MM, T2_FOOTER_MM);
+
+        double rowMm = "invoice-template".equals(templateName) ? T1_ROW_MM : T2_ROW_MM;
         context.setVariable("fillerRows", fillerRowCount > 0
-                ? java.util.stream.IntStream.range(0, fillerRowCount).boxed().toList()
-                : java.util.Collections.emptyList());
+                ? IntStream.range(0, fillerRowCount).boxed().toList()
+                : Collections.emptyList());
 
         try {
             String urlToFetch = (details.getLogoUrl() != null && !details.getLogoUrl().isEmpty())
@@ -151,17 +182,11 @@ public class PdfServiceImpl implements PdfService {
         }
         context.setVariable("taxMode", details.getTaxMode());
 
-        String templateName = "template1".equals(details.getPreferredTemplate())
-                ? "invoice-template"
-                : "invoice-template-2";
         String htmlContent = templateEngine.process(templateName, context);
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
 
-            // ── Embed a Unicode font so the ₹ glyph (U+20B9) actually renders.
-            // If this fails, log it but don't kill the whole PDF — better to
-            // ship an invoice missing ₹ than no invoice at all.
             try {
                 ITextFontResolver fontResolver = renderer.getFontResolver();
                 fontResolver.addFont(resolveFontPath(), BaseFont.IDENTITY_H, BaseFont.EMBEDDED);
@@ -176,13 +201,13 @@ public class PdfServiceImpl implements PdfService {
         }
     }
 
-    /**
-     * Resolves an on-disk path to the embedded font, caching it after first use.
-     * Works both when running exploded (IDE/dev) via ClassPathResource#getFile,
-     * and when running from a packaged jar (OCI VM deployment) — in that case
-     * getFile() throws because the resource lives inside the jar, so we fall
-     * back to extracting it once to a temp file.
-     */
+    private int computeFillerRows(int itemCount, double totalContentMm, double headerMm,
+                                  double tableHeaderMm, double rowMm, double footerMm) {
+        double used = headerMm + tableHeaderMm + (itemCount * rowMm) + footerMm;
+        double remainingMm = Math.max(0, totalContentMm - used);
+        return (int) Math.floor(remainingMm / rowMm);
+    }
+
     private String resolveFontPath() throws IOException {
         String path = cachedFontPath;
         if (path != null) {
@@ -208,11 +233,6 @@ public class PdfServiceImpl implements PdfService {
         }
     }
 
-    /**
-     * Fetches a logo from S3, caching the base64 result in memory for
-     * LOGO_CACHE_TTL. Cuts a network round-trip on every bill's PDF render
-     * for logos that essentially never change between requests.
-     */
     private String getLogoBase64Cached(String key) {
         CachedLogo cached = logoCache.get(key);
         if (cached != null && !cached.isExpired()) {
