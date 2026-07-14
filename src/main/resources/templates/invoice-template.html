@@ -307,11 +307,7 @@
     </style>
 </head>
 <body>
-<div class="invoice-content"
-     th:with="subtotal=${#aggregates.sum(bill.billItems.![rate * quantity])},
-              discountTotal=${#aggregates.sum(bill.billItems.![free * rate])},
-              cgstTotal=${#aggregates.sum(bill.billItems.![rate * quantity * snapshotCgst / 100.0])},
-              sgstTotal=${#aggregates.sum(bill.billItems.![rate * quantity * snapshotSgst / 100.0])}">
+<div class="invoice-content">
 
     <div class="print-title">INVOICE</div>
 
