@@ -4,7 +4,7 @@ import com.gst.billingandstockmanagement.entities.Product;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.User;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,16 +20,16 @@ public interface StockRepository extends JpaRepository<Stock, Long>, JpaSpecific
 	List<Stock> findByUser(User user);
 
 	Stock findByUserAndProductAndBatchNoAndExpiryDate(
-			User user, Product product, String batchNo, Date expiryDate
+			User user, Product product, String batchNo, LocalDate expiryDate
 	);
 
 	Optional<Stock> findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
-			User user, Product product, String batchNo, Date expiryDate, Double mrp
+			User user, Product product, String batchNo, LocalDate expiryDate, Double mrp
 	);
 
-	List<Stock> findByExpiryDateBetweenAndLastExpiryNotificationDateIsNull(Date start, Date end);
+	List<Stock> findByExpiryDateBetweenAndLastExpiryNotificationDateIsNull(LocalDate start, LocalDate end);
 
-	List<Stock> findByExpiryDateBeforeAndExpiredNotificationDateIsNull(Date date);
+	List<Stock> findByExpiryDateBeforeAndExpiredNotificationDateIsNull(LocalDate date);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("select s from Stock s where s.id = :id")

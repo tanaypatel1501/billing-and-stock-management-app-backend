@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.entities;
 
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -34,7 +35,7 @@ public class Stock {
 
 	private int quantity;
 	private String batchNo;
-	private Date expiryDate;
+	private LocalDate expiryDate;
 
 	@Column(nullable = true)
 	private Double mrp;

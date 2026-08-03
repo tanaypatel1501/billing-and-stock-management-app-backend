@@ -1,6 +1,6 @@
 package com.gst.billingandstockmanagement.dto;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 import lombok.Data;
 
@@ -11,6 +11,6 @@ public class StockDTO {
 	private Long productId;
 	private int quantity;
 	private String batchNo;
-	private Date expiryDate;
+	private LocalDate expiryDate;
 	private Double mrp;
 }

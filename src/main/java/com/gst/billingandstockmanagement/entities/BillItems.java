@@ -1,6 +1,6 @@
 package com.gst.billingandstockmanagement.entities;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -45,6 +45,6 @@ public class BillItems {
     private int quantity;
     private int free;
     private Double rate;
-    private Date expiryDate;
+    private LocalDate expiryDate;
     private Double amount;
 }
