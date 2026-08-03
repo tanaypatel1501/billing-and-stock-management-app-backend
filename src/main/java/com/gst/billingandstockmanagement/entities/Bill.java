@@ -1,6 +1,6 @@
 package com.gst.billingandstockmanagement.entities;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -33,7 +33,7 @@ public class Bill {
 	private String dl1;
 	private String dl2;
 	private String gstin;
-	private Date invoiceDate;
+	private LocalDate invoiceDate;
 
 	private Double totalAmount;
 

@@ -9,15 +9,15 @@ import com.gst.billingandstockmanagement.dto.BillItemsDTO;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.utils.PaginationUtils;
 import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -198,28 +198,19 @@ public class BillServiceImpl implements BillService {
 
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-
             try {
                 if (fromStr != null && !fromStr.isBlank()) {
-                    Date from = sdf.parse(fromStr);
+                    LocalDate from = LocalDate.parse(fromStr);
                     predicates.add(cb.greaterThanOrEqualTo(root.get("invoiceDate"), from));
                 }
                 if (toStr != null && !toStr.isBlank()) {
-                    // Add 1 day to make "to" inclusive of the full day
-                    Date to = sdf.parse(toStr);
-                    java.util.Calendar cal = java.util.Calendar.getInstance();
-                    cal.setTime(to);
-                    cal.add(java.util.Calendar.DAY_OF_MONTH, 1);
-                    predicates.add(cb.lessThan(root.get("invoiceDate"), cal.getTime()));
+                    LocalDate to = LocalDate.parse(toStr);
+                    predicates.add(cb.lessThanOrEqualTo(root.get("invoiceDate"), to));
                 }
             } catch (Exception e) {
                 // Bad date format — ignore silently, don't crash the search
             }
-
-            return predicates.isEmpty()
-                    ? cb.conjunction()
-                    : cb.and(predicates.toArray(new Predicate[0]));
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new Predicate[0]));
         };
     }
 

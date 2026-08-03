@@ -397,7 +397,7 @@
         </div>
         <div class="info-strip-cell">
             <span class="strip-label">Invoice Date</span>
-            <span th:text="${#dates.format(bill.invoiceDate, 'dd/MM/yyyy')}"></span>
+            <span th:text="${#temporals.format(bill.invoiceDate, 'dd/MM/yyyy')}"></span>
         </div>
         <div class="info-strip-cell">
             <span class="strip-label">DL No. 1</span>
