@@ -113,7 +113,7 @@ public class PdfController {
                 : "Unknown";
 
         String dateStr = bill.getInvoiceDate() != null
-                ? new SimpleDateFormat("dd-MM-yyyy").format(bill.getInvoiceDate())
+                ? bill.getInvoiceDate().format(java.time.format.DateTimeFormatter.ofPattern("dd-MM-yyyy"))
                 : "unknown-date";
 
         String base = "Invoice-" + purchaser + "-" + dateStr;

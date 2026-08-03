@@ -1,6 +1,6 @@
 package com.gst.billingandstockmanagement.dto;
 
-import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.Data;
 
@@ -12,7 +12,7 @@ public class BillDTO {
     private String dl1;
     private String dl2;
     private String gstin;
-    private Date invoiceDate;
+    private LocalDate invoiceDate;
 
     private Double totalAmount;
     private boolean paid;
