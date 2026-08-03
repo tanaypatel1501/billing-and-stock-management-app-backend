@@ -17,7 +17,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -72,11 +71,9 @@ public class StockServiceImpl implements StockService {
         Product product = productRepository.findById(stockDTO.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        Date normalizedExpiry = normalizeExpiryDate(stockDTO.getExpiryDate());
-
         Stock existingStock = stockRepository
                 .findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
-                        user, product, stockDTO.getBatchNo(), normalizedExpiry, stockDTO.getMrp()
+                        user, product, stockDTO.getBatchNo(), stockDTO.getExpiryDate(), stockDTO.getMrp()
                 ).orElse(null);
 
         Stock savedStock;
@@ -89,7 +86,7 @@ public class StockServiceImpl implements StockService {
             stock.setProduct(product);
             stock.setQuantity(stockDTO.getQuantity());
             stock.setBatchNo(stockDTO.getBatchNo());
-            stock.setExpiryDate(normalizedExpiry);
+            stock.setExpiryDate(stockDTO.getExpiryDate());
             stock.setMrp(stockDTO.getMrp());
             savedStock = stockRepository.save(stock);
         }
@@ -116,9 +113,7 @@ public class StockServiceImpl implements StockService {
 
         stock.setProduct(product);
         stock.setBatchNo(stockDTO.getBatchNo());
-        stock.setExpiryDate(
-                normalizeExpiryDate(stockDTO.getExpiryDate())
-        );
+        stock.setExpiryDate(stockDTO.getExpiryDate());
         if (stockDTO.getMrp() != null) {
             stock.setMrp(stockDTO.getMrp());
         }
@@ -162,17 +157,14 @@ public class StockServiceImpl implements StockService {
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")
     @Transactional
     public void sendExpiryAlerts() {
-        Date today = new Date();
-        Calendar cal = Calendar.getInstance();
-        cal.setTime(today);
-        cal.add(Calendar.DAY_OF_MONTH, 30);
-        Date thirtyDaysFromNow = cal.getTime();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        LocalDate thirtyDaysFromNow = today.plusDays(30);
 
         List<Stock> nearExpiry = stockRepository
                 .findByExpiryDateBetweenAndLastExpiryNotificationDateIsNull(today, thirtyDaysFromNow);
 
         List<Stock> alreadyExpired = stockRepository
-                .findByExpiryDateBeforeAndExpiredNotificationDateIsNull(new Date());
+                .findByExpiryDateBeforeAndExpiredNotificationDateIsNull(today);
 
         if (nearExpiry.isEmpty() && alreadyExpired.isEmpty()) return;
 
@@ -202,7 +194,7 @@ public class StockServiceImpl implements StockService {
 
     private void sendCombinedEmail(User user, List<Stock> near, List<Stock> expired) {
         StringBuilder content = new StringBuilder();
-        SimpleDateFormat sdf = new SimpleDateFormat("MM/yyyy");
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM/yyyy");
 
         content.append("<h2 style='margin:0 0 20px; font-size:24px; font-weight:800; color:#000;'>Inventory Status Alert</h2>");
         content.append("<p style='margin:0 0 16px; font-size:15px; color:#333; line-height:1.6;'>Hello ").append(user.getFirstname()).append(",</p>");
@@ -211,14 +203,14 @@ public class StockServiceImpl implements StockService {
         if (!expired.isEmpty()) {
             content.append("<div style='margin-bottom:30px;'>");
             content.append("<h3 style='color:#c92a2a; font-size:16px; margin-bottom:10px;'>🚨 Already Expired</h3>");
-            content.append(buildTable(expired, sdf, true));
+            content.append(buildTable(expired, fmt, true));
             content.append("</div>");
         }
 
         if (!near.isEmpty()) {
             content.append("<div style='margin-bottom:30px;'>");
             content.append("<h3 style='color:#e67e22; font-size:16px; margin-bottom:10px;'>⚠️ Expiring Soon (Within 30 Days)</h3>");
-            content.append(buildTable(near, sdf, false));
+            content.append(buildTable(near, fmt, false));
             content.append("</div>");
         }
 
@@ -236,7 +228,7 @@ public class StockServiceImpl implements StockService {
         emailService.sendEmail(user.getEmail(), "Stock Alert: Expired & Near Expiry Items - GST Medicose", finalBody);
     }
 
-    private String buildTable(List<Stock> stocks, SimpleDateFormat sdf, boolean isCritical) {
+    private String buildTable(List<Stock> stocks, DateTimeFormatter fmt, boolean isCritical) {
         String accentColor = isCritical ? "#c92a2a" : "#e67e22";
         StringBuilder table = new StringBuilder("<table width='100%' cellspacing='0' cellpadding='0' style='border:1px solid #eee; border-radius:8px; overflow:hidden;'>")
                 .append("<tr style='background-color:#f9f9f9;'>")
@@ -250,7 +242,7 @@ public class StockServiceImpl implements StockService {
                     .append("<td style='padding:12px; border-top:1px solid #eee; font-size:14px; font-weight:600;'>").append(s.getProduct().getName()).append("</td>")
                     .append("<td style='padding:12px; border-top:1px solid #eee; font-size:14px; color:#666;'>").append(s.getBatchNo()).append("</td>")
                     .append("<td style='padding:12px; border-top:1px solid #eee; font-size:14px; font-weight:700; color:").append(accentColor).append(";'>")
-                    .append(sdf.format(s.getExpiryDate())).append("</td>")
+                    .append(s.getExpiryDate().format(fmt)).append("</td>")
                     .append("</tr>");
         }
         table.append("</table>");
@@ -294,21 +286,5 @@ public class StockServiceImpl implements StockService {
         dto.setExpiryDate(stock.getExpiryDate());
         dto.setMrp(stock.getMrp());
         return dto;
-    }
-
-    private Date normalizeExpiryDate(Date date) {
-        if (date == null) {
-            return null;
-        }
-
-        Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
-        cal.setTime(date);
-
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 59);
-        cal.set(Calendar.MILLISECOND, 999);
-
-        return cal.getTime();
     }
 }

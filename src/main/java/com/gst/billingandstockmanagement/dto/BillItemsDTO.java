@@ -1,8 +1,6 @@
 package com.gst.billingandstockmanagement.dto;
 
-import java.util.Date;
-
-import jakarta.persistence.Column;
+import java.time.LocalDate;
 import lombok.Data;
 
 @Data
@@ -21,6 +19,6 @@ public class BillItemsDTO {
     private int quantity;
     private int free;
     private Double rate;
-    private Date expiryDate;
+    private LocalDate expiryDate;
     private Double amount;
 }

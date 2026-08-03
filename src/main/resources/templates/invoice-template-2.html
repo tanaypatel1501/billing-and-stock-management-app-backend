@@ -488,7 +488,7 @@
             <td th:text="${item.snapshotPacking}"></td>
             <td th:text="${item.snapshotHsn}"></td>
             <td th:text="${item.batchNo}"></td>
-            <td th:text="${#dates.format(item.expiryDate, 'MM/yyyy')}"></td>
+            <td th:text="${#temporals.format(item.expiryDate, 'MM/yyyy')}"></td>
             <td th:text="${item.quantity}"></td>
             <td th:text="${item.free}"></td>
             <td th:text="'₹' + ${#numbers.formatDecimal(item.snapshotUnitPrice, 1, 2)}"></td>
