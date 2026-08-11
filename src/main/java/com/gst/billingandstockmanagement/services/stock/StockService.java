@@ -2,6 +2,7 @@ package com.gst.billingandstockmanagement.services.stock;
 
 import java.util.List;
 
+import com.gst.billingandstockmanagement.dto.InventoryValueDTO;
 import com.gst.billingandstockmanagement.dto.StockDTO;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.User;
@@ -24,5 +25,5 @@ public interface StockService {
 
     void sendExpiryAlerts();
 
-     Double getTotalInventoryValue(Long userId);
+    InventoryValueDTO getTotalInventoryValue(Long userId);
 }
