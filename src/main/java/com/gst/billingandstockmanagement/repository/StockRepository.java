@@ -36,10 +36,20 @@ public interface StockRepository extends JpaRepository<Stock, Long>, JpaSpecific
 	Optional<Stock> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 
 	@Query("""
-		select coalesce(sum(coalesce(s.mrp, p.MRP, 0.0) * s.quantity), 0.0)
-		from Stock s
-		join s.product p
-		where s.user.id = :userId
+	   select coalesce(sum(coalesce(s.mrp, p.MRP, 0.0) * s.quantity), 0.0)
+	   from Stock s
+	   join s.product p
+	   where s.user.id = :userId
+	   and s.expiryDate >= :today
 	""")
-	Double calculateInventoryValueForUser(@Param("userId") Long userId);
+	Double calculateActiveInventoryValueForUser(@Param("userId") Long userId, @Param("today") LocalDate today);
+
+	@Query("""
+	   select coalesce(sum(coalesce(s.mrp, p.MRP, 0.0) * s.quantity), 0.0)
+	   from Stock s
+	   join s.product p
+	   where s.user.id = :userId
+	   and s.expiryDate < :today
+	""")
+	Double calculateExpiredInventoryValueForUser(@Param("userId") Long userId, @Param("today") LocalDate today);
 }

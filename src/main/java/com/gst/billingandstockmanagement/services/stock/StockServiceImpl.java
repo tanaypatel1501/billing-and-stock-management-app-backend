@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.services.stock;
 
+import com.gst.billingandstockmanagement.dto.InventoryValueDTO;
 import com.gst.billingandstockmanagement.dto.StockDTO;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.entities.Product;
@@ -143,11 +144,14 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
-    public Double getTotalInventoryValue(Long userId) {
+    public InventoryValueDTO getTotalInventoryValue(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("User not found");
         }
-        return stockRepository.calculateInventoryValueForUser(userId);
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        Double active = stockRepository.calculateActiveInventoryValueForUser(userId, today);
+        Double expired = stockRepository.calculateExpiredInventoryValueForUser(userId, today);
+        return new InventoryValueDTO(active, expired);
     }
 
     @Scheduled(cron = "0 0 9 * * *", zone = "Asia/Kolkata")

@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.controllers;
 
+import com.gst.billingandstockmanagement.dto.InventoryValueDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -81,7 +82,7 @@ public class StockController {
     }
 
     @GetMapping("/user/inventory-value")
-    public ResponseEntity<Double> getInventoryValue() {
+    public ResponseEntity<InventoryValueDTO> getInventoryValue() {
         return ResponseEntity.ok(stockService.getTotalInventoryValue(SecurityUtils.getCurrentUserId()));
     }
 
