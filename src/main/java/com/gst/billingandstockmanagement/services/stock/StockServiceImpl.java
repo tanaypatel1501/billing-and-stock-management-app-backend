@@ -99,8 +99,8 @@ public class StockServiceImpl implements StockService {
     }
 
     @Override
+    @Transactional
     public void updateStock(StockDTO stockDTO) {
-
         Stock stock = stockRepository.findById(stockDTO.getId())
                 .orElseThrow(() -> new RuntimeException("Stock not found"));
 
@@ -117,13 +117,8 @@ public class StockServiceImpl implements StockService {
         if (stockDTO.getMrp() != null) {
             stock.setMrp(stockDTO.getMrp());
         }
-
-        if (stockDTO.getQuantity() == 0) {
-            stockRepository.delete(stock);
-        } else {
-            stock.setQuantity(stockDTO.getQuantity());
-            stockRepository.save(stock);
-        }
+        stock.setQuantity(stockDTO.getQuantity());
+        stockRepository.save(stock);
     }
 
     @Override
@@ -142,6 +137,7 @@ public class StockServiceImpl implements StockService {
 
         Specification<Stock> spec = builder.build(request.getSearchText(), fields, request.getFilters());
         spec = builder.withFetch(spec, "product");
+        spec = spec.and((root, query, cb) -> cb.greaterThan(root.get("quantity"), 0));
 
         return stockRepository.findAll(spec, pageable);
     }
