@@ -23,6 +23,7 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
         FROM BillItems bi
         JOIN bi.bill b
         WHERE b.user.id = :userId
+          AND b.reverted = false
           AND (:paidOnly = false OR b.paid = true)
         GROUP BY bi.snapshotProductName
         ORDER BY SUM(bi.quantity) DESC
@@ -47,6 +48,7 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
         JOIN bi.bill b
         WHERE b.user.id = :userId
           AND YEAR(b.invoiceDate) = :year
+          AND b.reverted = false
           AND (:paidOnly = false OR b.paid = true)
         GROUP BY YEAR(b.invoiceDate), MONTH(b.invoiceDate)
         ORDER BY MONTH(b.invoiceDate)
@@ -69,6 +71,7 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
         FROM BillItems bi
         JOIN bi.bill b
         WHERE b.user.id = :userId
+          AND b.reverted = false
           AND (:paidOnly = false OR b.paid = true)
         GROUP BY YEAR(b.invoiceDate)
         ORDER BY YEAR(b.invoiceDate)
@@ -88,6 +91,7 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
         FROM BillItems bi
         JOIN bi.bill b
         WHERE b.user.id = :userId
+          AND b.reverted = false
           AND (:paidOnly = false OR b.paid = true)
     """)
     SalesSummaryDTO findSalesSummary(
@@ -101,6 +105,7 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
         FROM BillItems bi
         JOIN bi.bill b
         WHERE b.user.id = :userId
+          AND b.reverted = false
         ORDER BY YEAR(b.invoiceDate) DESC
     """)
     List<Integer> findAvailableYears(@Param("userId") Long userId);

@@ -48,5 +48,8 @@ public class Bill {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "purchaser_id", nullable = true)
 	private Purchaser purchaser;
+
+	@Column(nullable = false, columnDefinition = "boolean default false")
+	private boolean reverted = false;
 }
 

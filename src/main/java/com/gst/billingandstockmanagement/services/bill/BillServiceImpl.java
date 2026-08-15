@@ -17,6 +17,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.Predicate;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -70,26 +72,17 @@ public class BillServiceImpl implements BillService {
         List<Bill> bills = billRepository.findAll();
         return bills.stream().map(this::convertToBillDTO).collect(Collectors.toList());
     }
-    
+
     @Override
     public List<BillDTO> getAllBillsByUser(Long userId) {
-        // Fetch the User entity from the database using the userId
         User user = userRepository.findById(userId).orElse(null);
-
         if (user == null) {
-            // Handle the case where the user is not found
             throw new RuntimeException("User not found with ID: " + userId);
         }
-
-        // Fetch all bills associated with the user
-        List<Bill> userBills = billRepository.findByUser(user);
-
-        // Convert the list of Bill entities to a list of BillDTOs
-        List<BillDTO> userBillDTOs = userBills.stream()
-                .map(this::convertToBillDTO)
+        List<Bill> userBills = billRepository.findByUser(user).stream()
+                .filter(b -> !b.isReverted())
                 .collect(Collectors.toList());
-
-        return userBillDTOs;
+        return userBills.stream().map(this::convertToBillDTO).collect(Collectors.toList());
     }
 
     // Helper method to convert a Bill entity to a BillDTO
@@ -104,6 +97,7 @@ public class BillServiceImpl implements BillService {
         billDTO.setInvoiceDate(bill.getInvoiceDate());
         billDTO.setTotalAmount(bill.getTotalAmount());
         billDTO.setPaid(bill.isPaid());
+        billDTO.setReverted(bill.isReverted());
 
         // Map bill items to DTOs using snapshot fields
         if (bill.getBillItems() != null) {
@@ -178,7 +172,8 @@ public class BillServiceImpl implements BillService {
         Specification<Bill> dateSpec      = buildDateRangeSpec(fromDateStr, toDateStr);
         Specification<Bill> purchaserSpec = buildPurchaserSpec(request.getPurchaserId());
 
-        Specification<Bill> finalSpec = Specification.where(baseSpec);
+        Specification<Bill> finalSpec = Specification.where(baseSpec)
+                .and((root, query, cb) -> cb.isFalse(root.get("reverted")));
         if (dateSpec != null)      finalSpec = finalSpec.and(dateSpec);
         if (purchaserSpec != null) finalSpec = finalSpec.and(purchaserSpec);
 
@@ -306,5 +301,61 @@ public class BillServiceImpl implements BillService {
         result.setPurchaserName(savedBill.getPurchaserName());
         result.setTotalAmount(savedBill.getTotalAmount());
         return result;
+    }
+
+    @Override
+    @Transactional
+    public void revertBill(Long billId) {
+        Bill bill = billRepository.findById(billId)
+                .orElseThrow(() -> new RuntimeException("Bill not found: " + billId));
+
+        if (bill.isReverted()) {
+            throw new IllegalStateException("This bill has already been reverted");
+        }
+
+        User user = bill.getUser();
+
+        for (BillItems item : bill.getBillItems()) {
+            if (item.getProduct() == null) {
+                throw new IllegalStateException(
+                        "Cannot revert: product for item '" + item.getSnapshotProductName() + "' no longer exists");
+            }
+
+            int totalToRestore = item.getQuantity() + item.getFree();
+
+            Stock stock = stockRepository
+                    .findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
+                            user, item.getProduct(), item.getBatchNo(),
+                            item.getExpiryDate(), item.getSnapshotUnitPrice()
+                    ).orElse(null);
+
+            if (stock == null) {
+                stock = new Stock();
+                stock.setUser(user);
+                stock.setProduct(item.getProduct());
+                stock.setBatchNo(item.getBatchNo());
+                stock.setExpiryDate(item.getExpiryDate());
+                stock.setMrp(item.getSnapshotUnitPrice());
+                stock.setQuantity(0);
+            }
+
+            stock.setQuantity(stock.getQuantity() + totalToRestore);
+            stockRepository.save(stock);
+
+            StockLog log = new StockLog();
+            log.setStock(stock);
+            log.setAction("REVERTED");
+            log.setNotes(String.format(
+                    "Restored %d%s quantity from reverted <a class=\"bill-link\" data-bill-id=\"%d\">Bill #%d</a> (%s)",
+                    item.getQuantity(),
+                    item.getFree() > 0 ? " + " + item.getFree() + " free" : "",
+                    bill.getId(), bill.getId(), bill.getPurchaserName()
+            ));
+            log.setTimestamp(java.time.LocalDateTime.now());
+            stockLogRepository.save(log);
+        }
+
+        bill.setReverted(true);
+        billRepository.save(bill);
     }
 }
