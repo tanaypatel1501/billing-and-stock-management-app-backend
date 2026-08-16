@@ -24,4 +24,6 @@ public interface BillService {
 	void updatePaidStatus(Long billId, boolean paid);
 
 	BillDTO submitBillWithItems(BillDTO billDTO);
+
+	void revertBill(Long billId);
 }

@@ -19,4 +19,5 @@ public class BillDTO {
 
     private List<BillItemsDTO> billItems;
     private Long purchaserId;
+    private boolean reverted;
 }

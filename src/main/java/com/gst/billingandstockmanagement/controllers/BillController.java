@@ -78,4 +78,15 @@ public class BillController {
         billService.updatePaidStatus(billId, paid);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/{billId}/revert")
+    public ResponseEntity<Void> revertBill(@PathVariable Long billId) {
+        BillDTO dto = billService.getBillById(billId);
+        if (dto == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bill not found");
+        }
+        SecurityUtils.requireOwnership(dto.getUserId());
+        billService.revertBill(billId);
+        return ResponseEntity.ok().build();
+    }
 }
