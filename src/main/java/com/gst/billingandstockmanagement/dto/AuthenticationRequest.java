@@ -9,4 +9,6 @@ public class AuthenticationRequest {
 
     private String password;
 
+    private String clientType;
+
 }

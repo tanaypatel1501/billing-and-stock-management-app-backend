@@ -44,6 +44,7 @@ public class WebSecurityConfiguration {
                                 "/authenticate",
                                 "/sign-up",
                                 "/refresh-token",
+                                "/mobile-session/renew",
                                 "/forgot-password",
                                 "/reset-password",
                                 "/verify-email",
