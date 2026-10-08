@@ -144,7 +144,13 @@ public class AuthenticationController {
 
         if (authHeader != null && authHeader.startsWith(TOKEN_PREFIX)) {
             token = authHeader.substring(TOKEN_PREFIX.length());
-            username = jwtUtil.extractUsername(token);
+
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (io.jsonwebtoken.JwtException | IllegalArgumentException e) {
+                // Expired or invalid JWT cannot be refreshed.
+                username = null;
+            }
         }
 
         // Check if the token can be refreshed
