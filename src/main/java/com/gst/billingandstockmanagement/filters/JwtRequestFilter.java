@@ -18,11 +18,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.gst.billingandstockmanagement.services.jwt.UserDetailsServiceImpl;
 import com.gst.billingandstockmanagement.utils.JwtUtil;
 
-
+import io.jsonwebtoken.JwtException;
 
 @Component
-public class JwtRequestFilter extends OncePerRequestFilter  {
-
+public class JwtRequestFilter extends OncePerRequestFilter {
 
     @Autowired
     private UserDetailsServiceImpl userDetailsService;
@@ -31,14 +30,19 @@ public class JwtRequestFilter extends OncePerRequestFilter  {
     private JwtUtil jwtUtil;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException, ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtUtil.extractUsername(token);
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (JwtException | IllegalArgumentException e) {
+                username = null;
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
@@ -49,10 +53,8 @@ public class JwtRequestFilter extends OncePerRequestFilter  {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
-
         }
 
         filterChain.doFilter(request, response);
     }
-
 }
