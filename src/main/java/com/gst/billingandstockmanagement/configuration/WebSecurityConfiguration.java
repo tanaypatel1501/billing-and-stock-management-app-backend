@@ -1,5 +1,6 @@
 package com.gst.billingandstockmanagement.configuration;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,11 +34,14 @@ public class WebSecurityConfiguration {
         http
                 .csrf(AbstractHttpConfigurer::disable)
 
+                .logout(AbstractHttpConfigurer::disable)
+
                 .sessionManagement(management -> management
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
 
                 .authorizeHttpRequests(authorize -> authorize
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         // Public Endpoints
                         .requestMatchers(
                                 "/health-check/**",
@@ -49,7 +53,8 @@ public class WebSecurityConfiguration {
                                 "/reset-password",
                                 "/verify-email",
                                 "/resend-verification",
-                                "/auth/google"
+                                "/auth/google",
+                                "/logout"
                         ).permitAll()
 
                         // Product-request endpoints:
