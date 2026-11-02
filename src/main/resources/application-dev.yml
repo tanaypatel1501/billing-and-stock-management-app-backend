@@ -51,6 +51,15 @@ mobile:
   session:
     expirationMs: ${MOBILE_SESSION_EXPIRATION_MS:2592000000}
 
+chatbot:
+  datasource:
+    username: ${CHATBOT_DB_USERNAME:}
+    password: ${CHATBOT_DB_PASSWORD:}
+  llm:
+    gemini:
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:}
+
 logging:
   level:
     root: INFO
