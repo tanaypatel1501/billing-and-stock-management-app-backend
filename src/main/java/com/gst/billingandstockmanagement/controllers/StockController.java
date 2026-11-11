@@ -1,6 +1,5 @@
 package com.gst.billingandstockmanagement.controllers;
 
-import com.gst.billingandstockmanagement.dto.InventoryValueDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -13,10 +12,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import com.gst.billingandstockmanagement.dto.StockDTO;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
+import com.gst.billingandstockmanagement.dto.InventoryValueDTO;
+import com.gst.billingandstockmanagement.dto.CostUpdateRequest;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.stock.StockService;
@@ -84,6 +87,21 @@ public class StockController {
     @GetMapping("/user/inventory-value")
     public ResponseEntity<InventoryValueDTO> getInventoryValue() {
         return ResponseEntity.ok(stockService.getTotalInventoryValue(SecurityUtils.getCurrentUserId()));
+    }
+
+    @GetMapping("/user/missing-cost")
+    public ResponseEntity<Page<Stock>> getMissingCost(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return ResponseEntity.ok(stockService.getMissingCostStock(
+                SecurityUtils.getCurrentUserId(), PageRequest.of(Math.max(page, 0), safeSize)));
+    }
+
+    @PatchMapping("/{stockId}/cost")
+    public ResponseEntity<Void> updateCost(@PathVariable Long stockId, @RequestBody CostUpdateRequest request) {
+        stockService.updateStockCost(stockId, SecurityUtils.getCurrentUserId(), request.getCostRate());
+        return ResponseEntity.ok().build();
     }
 
     private void requireOwnership(Long resourceOwnerId) {

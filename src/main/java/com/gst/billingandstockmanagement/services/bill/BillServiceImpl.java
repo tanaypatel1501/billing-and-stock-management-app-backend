@@ -264,6 +264,7 @@ public class BillServiceImpl implements BillService {
                 billItem.setSnapshotCgst(product.getCGST());
                 billItem.setSnapshotSgst(product.getSGST());
                 billItem.setSnapshotUnitPrice(stock.getMrp() != null ? stock.getMrp() : product.getMRP());
+                billItem.setSnapshotCost(stock.getCostRate());
                 billItem.setBatchNo(stock.getBatchNo());
                 billItem.setExpiryDate(stock.getExpiryDate());   // copied directly — no string round-trip
                 billItem.setQuantity(itemDTO.getQuantity());
@@ -339,6 +340,16 @@ public class BillServiceImpl implements BillService {
                 stock.setQuantity(0);
             }
 
+            Double soldCost = item.getSnapshotCost();
+            if (soldCost != null) {
+                int onHand = stock.getQuantity();
+                if (stock.getCostRate() != null && onHand > 0) {
+                    stock.setCostRate(round4(
+                            (onHand * stock.getCostRate() + totalToRestore * soldCost) / (onHand + totalToRestore)));
+                } else {
+                    stock.setCostRate(round4(soldCost));
+                }
+            }
             stock.setQuantity(stock.getQuantity() + totalToRestore);
             stockRepository.save(stock);
 
@@ -357,5 +368,9 @@ public class BillServiceImpl implements BillService {
 
         bill.setReverted(true);
         billRepository.save(bill);
+    }
+
+    private static double round4(double v) {
+        return Math.round(v * 10000.0) / 10000.0;
     }
 }
