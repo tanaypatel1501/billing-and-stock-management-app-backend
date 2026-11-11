@@ -47,4 +47,5 @@ public class BillItems {
     private Double rate;
     private LocalDate expiryDate;
     private Double amount;
+    private Double snapshotCost;
 }

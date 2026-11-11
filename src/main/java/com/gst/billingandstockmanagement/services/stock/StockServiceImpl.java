@@ -6,9 +6,11 @@ import com.gst.billingandstockmanagement.dto.SearchRequest;
 import com.gst.billingandstockmanagement.entities.Product;
 import com.gst.billingandstockmanagement.entities.Stock;
 import com.gst.billingandstockmanagement.entities.User;
+import com.gst.billingandstockmanagement.entities.StockLog;
 import com.gst.billingandstockmanagement.repository.ProductRepository;
 import com.gst.billingandstockmanagement.repository.StockRepository;
 import com.gst.billingandstockmanagement.repository.UserRepository;
+import com.gst.billingandstockmanagement.repository.StockLogRepository;
 import com.gst.billingandstockmanagement.services.email.EmailService;
 import com.gst.billingandstockmanagement.utils.PaginationUtils;
 import com.gst.billingandstockmanagement.specifications.SpecificationBuilder;
@@ -30,6 +32,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.access.AccessDeniedException;
 
 @Service
 public class StockServiceImpl implements StockService {
@@ -41,6 +46,9 @@ public class StockServiceImpl implements StockService {
     
     @Autowired
     UserRepository userRepository;
+
+    @Autowired
+    private StockLogRepository stockLogRepository;
 
     @Autowired
     private EmailService emailService;
@@ -61,16 +69,22 @@ public class StockServiceImpl implements StockService {
         dto.setExpiryDate(stock.getExpiryDate());
         dto.setQuantity(stock.getQuantity());
         dto.setMrp(stock.getMrp());
-
+        dto.setCostRate(stock.getCostRate());
         return dto;
     }
 
     @Override
+    @Transactional
     public StockDTO addStock(StockDTO stockDTO) {
         User user = userRepository.findById(stockDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Product product = productRepository.findById(stockDTO.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        Double costRate = stockDTO.getCostRate();
+        if (costRate != null && (costRate < 0 || !Double.isFinite(costRate))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cost per unit cannot be negative");
+        }
 
         Stock existingStock = stockRepository
                 .findByUserAndProductAndBatchNoAndExpiryDateAndMrp(
@@ -79,8 +93,25 @@ public class StockServiceImpl implements StockService {
 
         Stock savedStock;
         if (existingStock != null) {
-            existingStock.setQuantity(existingStock.getQuantity() + stockDTO.getQuantity());
-            savedStock = stockRepository.save(existingStock);
+            // Lock the row: the cost average below reads and rewrites the quantity
+            Stock locked = stockRepository.findByIdForUpdate(existingStock.getId())
+                    .orElseThrow(() -> new RuntimeException("Stock not found"));
+
+            int oldQty = locked.getQuantity();
+            int addedQty = stockDTO.getQuantity();
+
+            if (costRate != null) {
+                Double oldCost = locked.getCostRate();
+                if (oldCost != null && oldQty > 0) {
+                    // Weighted average of what is on the shelf and what was just added
+                    locked.setCostRate(round4((oldQty * oldCost + addedQty * costRate) / (oldQty + addedQty)));
+                } else {
+                    // The batch had no known cost, so it takes the cost entered now
+                    locked.setCostRate(round4(costRate));
+                }
+            }
+            locked.setQuantity(oldQty + addedQty);
+            savedStock = stockRepository.save(locked);
         } else {
             Stock stock = new Stock();
             stock.setUser(user);
@@ -89,6 +120,7 @@ public class StockServiceImpl implements StockService {
             stock.setBatchNo(stockDTO.getBatchNo());
             stock.setExpiryDate(stockDTO.getExpiryDate());
             stock.setMrp(stockDTO.getMrp());
+            stock.setCostRate(costRate != null ? round4(costRate) : null);
             savedStock = stockRepository.save(stock);
         }
         return mapToDTO(savedStock);
@@ -117,6 +149,12 @@ public class StockServiceImpl implements StockService {
         stock.setExpiryDate(stockDTO.getExpiryDate());
         if (stockDTO.getMrp() != null) {
             stock.setMrp(stockDTO.getMrp());
+        }
+        if (stockDTO.getCostRate() != null) {
+            if (stockDTO.getCostRate() < 0 || !Double.isFinite(stockDTO.getCostRate())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cost per unit cannot be negative");
+            }
+            stock.setCostRate(round4(stockDTO.getCostRate()));
         }
         stock.setQuantity(stockDTO.getQuantity());
         stockRepository.save(stock);
@@ -285,6 +323,43 @@ public class StockServiceImpl implements StockService {
         dto.setBatchNo(stock.getBatchNo());
         dto.setExpiryDate(stock.getExpiryDate());
         dto.setMrp(stock.getMrp());
+        dto.setCostRate(stock.getCostRate());
         return dto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Stock> getMissingCostStock(Long userId, Pageable pageable) {
+        return stockRepository.findMissingCost(userId, LocalDate.now(ZoneId.of("Asia/Kolkata")), pageable);
+    }
+
+    @Override
+    @Transactional
+    public void updateStockCost(Long stockId, Long userId, Double costRate) {
+        if (costRate == null || !Double.isFinite(costRate) || costRate < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid cost per unit (0 or more)");
+        }
+        Stock stock = stockRepository.findByIdForUpdate(stockId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Stock not found"));
+        if (!stock.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You do not have access to this stock.");
+        }
+
+        Double previous = stock.getCostRate();
+        stock.setCostRate(round4(costRate));
+        stockRepository.save(stock);
+
+        StockLog log = new StockLog();
+        log.setStock(stock);
+        log.setAction("UPDATE");
+        log.setNotes(previous == null
+                ? String.format(Locale.ROOT, "Cost set to ₹%.2f/unit", costRate)
+                : String.format(Locale.ROOT, "Cost changed from ₹%.2f to ₹%.2f/unit", previous, costRate));
+        log.setTimestamp(LocalDateTime.now());
+        stockLogRepository.save(log);
+    }
+
+    private static double round4(double v) {
+        return Math.round(v * 10000.0) / 10000.0;
     }
 }

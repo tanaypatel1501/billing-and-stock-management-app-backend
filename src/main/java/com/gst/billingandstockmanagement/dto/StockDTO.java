@@ -13,4 +13,5 @@ public class StockDTO {
 	private String batchNo;
 	private LocalDate expiryDate;
 	private Double mrp;
+	private Double costRate;
 }

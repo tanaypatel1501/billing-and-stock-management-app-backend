@@ -41,6 +41,9 @@ public class Stock {
 	private Double mrp;
 
 	@Column(nullable = true)
+	private Double costRate;
+
+	@Column(nullable = true)
 	private Date lastExpiryNotificationDate;
 
 	@Column(nullable = true)

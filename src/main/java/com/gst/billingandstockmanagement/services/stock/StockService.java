@@ -9,6 +9,8 @@ import com.gst.billingandstockmanagement.entities.User;
 import org.springframework.data.domain.Page;
 import com.gst.billingandstockmanagement.dto.SearchRequest;
 
+import org.springframework.data.domain.Pageable;
+
 public interface StockService {
 
     StockDTO getStockById(Long stockId);
@@ -26,4 +28,8 @@ public interface StockService {
     void sendExpiryAlerts();
 
     InventoryValueDTO getTotalInventoryValue(Long userId);
+
+    Page<Stock> getMissingCostStock(Long userId, Pageable pageable);
+
+    void updateStockCost(Long stockId, Long userId, Double costRate);
 }
