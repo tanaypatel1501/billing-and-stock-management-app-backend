@@ -4,6 +4,7 @@ import com.gst.billingandstockmanagement.dto.sales.PeriodSalesDTO;
 import com.gst.billingandstockmanagement.dto.sales.SalesSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.TopProductDTO;
 import com.gst.billingandstockmanagement.dto.sales.ProfitTotalsDTO;
+import com.gst.billingandstockmanagement.dto.sales.MonthlyOutputGstRow;
 import com.gst.billingandstockmanagement.entities.BillItems;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -146,4 +147,24 @@ public interface BillItemsRepository extends JpaRepository<BillItems, Long> {
           AND bi.snapshotCost IS NOT NULL
     """)
     LocalDate findTrackingSince(@Param("userId") Long userId);
+
+    // GST collected per month: same formula as the invoice, rate x quantity x (cgst% + sgst%) / 100
+    @Query(value = """
+        SELECT DATE_FORMAT(b.invoice_date, '%Y-%m') AS ym,
+               COALESCE(SUM(bi.rate * bi.quantity), 0) AS taxable,
+               COALESCE(SUM(bi.rate * bi.quantity
+                            * (COALESCE(bi.snapshot_cgst, 0) + COALESCE(bi.snapshot_sgst, 0)) / 100), 0) AS gst
+        FROM bill b
+        JOIN bill_items bi ON bi.bill_id = b.id
+        WHERE b.user_id = :userId
+          AND b.reverted = 0
+          AND b.invoice_date BETWEEN :fromDate AND :toDate
+        GROUP BY DATE_FORMAT(b.invoice_date, '%Y-%m')
+        ORDER BY ym
+        """, nativeQuery = true)
+    List<MonthlyOutputGstRow> findMonthlyOutputGst(
+            @Param("userId") Long userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
 }

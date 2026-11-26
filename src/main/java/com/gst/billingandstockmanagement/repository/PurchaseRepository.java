@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.repository;
 
 import com.gst.billingandstockmanagement.entities.Purchase;
+import com.gst.billingandstockmanagement.dto.sales.MonthlyInputGstRow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
 
@@ -57,4 +59,27 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     @Transactional
     @Query("UPDATE Purchase p SET p.supplier = null WHERE p.supplier.id = :supplierId")
     void nullifySupplierReference(@Param("supplierId") Long supplierId);
+
+    // Input GST per month, from the totals stored on each (non-reverted) purchase
+    @Query(value = """
+        SELECT DATE_FORMAT(p.invoice_date, '%Y-%m') AS ym,
+               COALESCE(SUM(p.taxable_amount), 0) AS taxable,
+               COALESCE(SUM(p.cgst_amount), 0) AS cgst,
+               COALESCE(SUM(p.sgst_amount), 0) AS sgst,
+               COALESCE(SUM(p.igst_amount), 0) AS igst
+        FROM purchase p
+        WHERE p.user_id = :userId
+          AND p.reverted = 0
+          AND p.invoice_date BETWEEN :fromDate AND :toDate
+        GROUP BY DATE_FORMAT(p.invoice_date, '%Y-%m')
+        ORDER BY ym
+        """, nativeQuery = true)
+    List<MonthlyInputGstRow> findMonthlyInputGst(
+            @Param("userId") Long userId,
+            @Param("fromDate") LocalDate fromDate,
+            @Param("toDate") LocalDate toDate
+    );
+
+    @Query("SELECT MIN(p.invoiceDate) FROM Purchase p WHERE p.user.id = :userId AND p.reverted = false")
+    LocalDate findFirstPurchaseDate(@Param("userId") Long userId);
 }
