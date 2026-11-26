@@ -4,6 +4,7 @@ import com.gst.billingandstockmanagement.dto.sales.PeriodSalesDTO;
 import com.gst.billingandstockmanagement.dto.sales.SalesSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.TopProductDTO;
 import com.gst.billingandstockmanagement.dto.sales.ProfitSummaryDTO;
+import com.gst.billingandstockmanagement.dto.sales.GstSummaryDTO;
 import com.gst.billingandstockmanagement.entities.User;
 
 import java.util.List;
@@ -22,4 +23,6 @@ public interface SalesService {
     List<Integer> getAvailableYears(User user);
 
     ProfitSummaryDTO getProfitSummary(User user, boolean paidOnly, LocalDate fromDate, LocalDate toDate);
+
+    GstSummaryDTO getGstSummary(User user, int fyStartYear);
 }

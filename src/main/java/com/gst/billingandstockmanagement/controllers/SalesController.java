@@ -4,6 +4,7 @@ import com.gst.billingandstockmanagement.dto.sales.PeriodSalesDTO;
 import com.gst.billingandstockmanagement.dto.sales.SalesSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.TopProductDTO;
 import com.gst.billingandstockmanagement.dto.sales.ProfitSummaryDTO;
+import com.gst.billingandstockmanagement.dto.sales.GstSummaryDTO;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.sales.SalesService;
@@ -11,11 +12,14 @@ import com.gst.billingandstockmanagement.services.user.UserService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.List;
 import java.time.LocalDate;
+import java.time.ZoneId;
 
 @RestController
 @RequestMapping("/api/sales")
@@ -75,5 +79,17 @@ public class SalesController {
     ) {
         User user = userService.getUserById(SecurityUtils.getCurrentUserId());
         return ResponseEntity.ok(salesService.getProfitSummary(user, paidOnly, fromDate, toDate));
+    }
+
+    @GetMapping("/user/gst-summary")
+    public ResponseEntity<GstSummaryDTO> getGstSummary(@RequestParam(required = false) Integer fy) {
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Kolkata"));
+        int currentFy = today.getMonthValue() >= 4 ? today.getYear() : today.getYear() - 1;
+        int fyStart = fy != null ? fy : currentFy;
+        if (fyStart < 2000 || fyStart > currentFy + 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid financial year");
+        }
+        User user = userService.getUserById(SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(salesService.getGstSummary(user, fyStart));
     }
 }

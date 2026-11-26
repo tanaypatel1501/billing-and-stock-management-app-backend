@@ -4,6 +4,7 @@ import com.gst.billingandstockmanagement.entities.Bill;
 import com.gst.billingandstockmanagement.entities.User;
 
 import java.util.List;
+import java.time.LocalDate;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
@@ -24,4 +25,7 @@ public interface BillRepository extends JpaRepository<Bill, Long>, JpaSpecificat
     @Transactional
     @Query("UPDATE Bill b SET b.purchaser = null WHERE b.purchaser.id = :purchaserId")
     void nullifyPurchaserReference(@Param("purchaserId") Long purchaserId);
+
+    @Query("SELECT MIN(b.invoiceDate) FROM Bill b WHERE b.user.id = :userId AND b.reverted = false")
+    LocalDate findFirstBillDate(@Param("userId") Long userId);
 }
