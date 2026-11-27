@@ -210,14 +210,6 @@ public class BillServiceImpl implements BillService {
     }
 
     @Override
-    public void updatePaidStatus(Long billId, boolean paid) {
-        Bill bill = billRepository.findById(billId)
-                .orElseThrow(() -> new RuntimeException("Bill not found: " + billId));
-        bill.setPaid(paid);
-        billRepository.save(bill);
-    }
-
-    @Override
     @org.springframework.transaction.annotation.Transactional
     public BillDTO submitBillWithItems(BillDTO billDTO) {
         User user = userRepository.findById(billDTO.getUserId())

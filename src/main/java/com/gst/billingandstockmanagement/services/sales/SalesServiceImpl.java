@@ -9,24 +9,24 @@ import com.gst.billingandstockmanagement.dto.sales.GstMonthDTO;
 import com.gst.billingandstockmanagement.dto.sales.GstSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.MonthlyInputGstRow;
 import com.gst.billingandstockmanagement.dto.sales.MonthlyOutputGstRow;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingReportDTO;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.repository.BillItemsRepository;
 import com.gst.billingandstockmanagement.repository.StockRepository;
 import com.gst.billingandstockmanagement.repository.BillRepository;
 import com.gst.billingandstockmanagement.repository.PurchaseRepository;
-import com.gst.billingandstockmanagement.services.sales.SalesService;
 
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.YearMonth;
 
 @Service
 @RequiredArgsConstructor
@@ -171,6 +171,11 @@ public class SalesServiceImpl implements SalesService {
         dto.setTotals(totals);
         dto.setTrackedMonths(tracked);
         return dto;
+    }
+
+    @Override
+    public OutstandingReportDTO getOutstandingReport(User user) {
+        return OutstandingReportBuilder.build(billRepository.findOutstandingBills(user.getId()), "Unknown customer");
     }
 
     private static double num(Number n) {

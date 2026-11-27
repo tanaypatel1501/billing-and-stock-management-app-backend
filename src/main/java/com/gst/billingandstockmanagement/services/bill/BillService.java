@@ -21,8 +21,6 @@ public interface BillService {
 
 	Page<Bill> searchWithPagination(SearchRequest request);
 
-	void updatePaidStatus(Long billId, boolean paid);
-
 	BillDTO submitBillWithItems(BillDTO billDTO);
 
 	void revertBill(Long billId);

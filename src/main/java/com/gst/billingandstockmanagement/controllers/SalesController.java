@@ -5,6 +5,7 @@ import com.gst.billingandstockmanagement.dto.sales.SalesSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.TopProductDTO;
 import com.gst.billingandstockmanagement.dto.sales.ProfitSummaryDTO;
 import com.gst.billingandstockmanagement.dto.sales.GstSummaryDTO;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingReportDTO;
 import com.gst.billingandstockmanagement.entities.User;
 import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.sales.SalesService;
@@ -91,5 +92,12 @@ public class SalesController {
         }
         User user = userService.getUserById(SecurityUtils.getCurrentUserId());
         return ResponseEntity.ok(salesService.getGstSummary(user, fyStart));
+    }
+
+
+    @GetMapping("/user/outstanding")
+    public ResponseEntity<OutstandingReportDTO> getOutstanding() {
+        User user = userService.getUserById(SecurityUtils.getCurrentUserId());
+        return ResponseEntity.ok(salesService.getOutstandingReport(user));
     }
 }
