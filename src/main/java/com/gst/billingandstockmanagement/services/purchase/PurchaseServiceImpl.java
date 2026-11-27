@@ -2,8 +2,11 @@ package com.gst.billingandstockmanagement.services.purchase;
 
 import com.gst.billingandstockmanagement.dto.PurchaseDTO;
 import com.gst.billingandstockmanagement.dto.PurchaseItemsDTO;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingReportDTO;
 import com.gst.billingandstockmanagement.entities.*;
 import com.gst.billingandstockmanagement.repository.*;
+import com.gst.billingandstockmanagement.services.sales.OutstandingReportBuilder;
+import com.gst.billingandstockmanagement.services.purchasepayment.PurchasePaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,6 +39,7 @@ public class PurchaseServiceImpl implements PurchaseService {
     @Autowired private StockLogRepository stockLogRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private PurchasePaymentService purchasePaymentService;
 
     // ------------------------------------------------------------------
     // Submit
@@ -208,7 +212,12 @@ public class PurchaseServiceImpl implements PurchaseService {
         savedPurchase.setTotalAmount(round2(taxableR + cgstR + sgstR + igstR));
         purchaseRepository.save(savedPurchase);
 
-        return toDTO(savedPurchase, savedItems);
+        // "Already paid": the payment is written in this same transaction, so a bad payment rolls back the purchase too
+        purchasePaymentService.recordInitialPayment(savedPurchase, dto.getInitialPayment());
+
+        PurchaseDTO result = toDTO(savedPurchase, savedItems);
+        purchasePaymentService.attachBalanceWithPayments(result);
+        return result;
     }
 
     // ------------------------------------------------------------------
@@ -219,15 +228,19 @@ public class PurchaseServiceImpl implements PurchaseService {
     public PurchaseDTO getPurchaseById(Long purchaseId, Long userId) {
         Purchase purchase = purchaseRepository.findByIdAndUserId(purchaseId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Purchase not found"));
-        return toDTO(purchase, purchaseItemsRepository.findByPurchaseId(purchaseId));
+        PurchaseDTO dto = toDTO(purchase, purchaseItemsRepository.findByPurchaseId(purchaseId));
+        purchasePaymentService.attachBalanceWithPayments(dto);
+        return dto;
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<PurchaseDTO> getPurchases(Long userId, String search, LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         String s = (search == null) ? "" : search.trim();
-        return purchaseRepository.search(userId, s, fromDate, toDate, pageable)
+        Page<PurchaseDTO> page = purchaseRepository.search(userId, s, fromDate, toDate, pageable)
                 .map(p -> toDTO(p, null));
+        purchasePaymentService.attachBalances(page.getContent());
+        return page;
     }
 
     // ------------------------------------------------------------------
@@ -368,5 +381,10 @@ public class PurchaseServiceImpl implements PurchaseService {
 
     private static double round4(double v) {
         return Math.round(v * 10000.0) / 10000.0;
+    }
+
+    @Override
+    public OutstandingReportDTO getPayablesReport(Long userId) {
+        return OutstandingReportBuilder.build(purchaseRepository.findOutstandingPurchases(userId), "Unknown supplier");
     }
 }

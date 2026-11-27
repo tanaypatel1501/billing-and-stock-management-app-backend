@@ -6,8 +6,9 @@ import lombok.Data;
 
 @Data
 public class OutstandingCustomerDTO {
-    private Long purchaserId;           // null for bills not linked to a saved customer
+    private Long partyId;               // customer id (bills) or supplier id (purchases); null when not linked to a saved record
     private String name;
+    // number of open invoices (bills or purchases)
     private Long billCount;
     private Double outstanding;
 

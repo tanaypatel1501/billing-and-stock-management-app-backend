@@ -1,0 +1,56 @@
+package com.gst.billingandstockmanagement.entities;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@ToString(exclude = {"user", "purchase"})
+@Entity
+@Table(name = "purchase_payment")
+public class PurchasePayment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @EqualsAndHashCode.Include
+    private Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_id", nullable = false)
+    @JsonIgnore
+    private Purchase purchase;
+
+    private Double amount;
+
+    private LocalDate paymentDate;
+
+    // CASH, UPI, BANK, CHEQUE, OTHER (validated in the service)
+    private String mode = "CASH";
+
+    private String reference;
+    private String notes;
+
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        }
+    }
+}

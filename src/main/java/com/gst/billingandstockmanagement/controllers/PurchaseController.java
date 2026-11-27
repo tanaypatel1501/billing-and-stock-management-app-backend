@@ -1,8 +1,12 @@
 package com.gst.billingandstockmanagement.controllers;
 
 import com.gst.billingandstockmanagement.dto.PurchaseDTO;
+import com.gst.billingandstockmanagement.dto.PurchaseBalanceDTO;
+import com.gst.billingandstockmanagement.dto.PurchasePaymentDTO;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingReportDTO;
 import com.gst.billingandstockmanagement.security.SecurityUtils;
 import com.gst.billingandstockmanagement.services.purchase.PurchaseService;
+import com.gst.billingandstockmanagement.services.purchasepayment.PurchasePaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +23,9 @@ public class PurchaseController {
 
     @Autowired
     private PurchaseService purchaseService;
+
+    @Autowired
+    private PurchasePaymentService purchasePaymentService;
 
     @PostMapping("/add")
     public ResponseEntity<PurchaseDTO> addPurchase(@RequestBody PurchaseDTO dto) {
@@ -49,5 +56,32 @@ public class PurchaseController {
     public ResponseEntity<Void> revert(@PathVariable Long id) {
         purchaseService.revertPurchase(id, SecurityUtils.getCurrentUserId());
         return ResponseEntity.ok().build();
+    }
+
+
+    @GetMapping("/{id}/balance")
+    public ResponseEntity<PurchaseBalanceDTO> getBalance(@PathVariable Long id) {
+        return ResponseEntity.ok(purchasePaymentService.getBalance(SecurityUtils.getCurrentUserId(), id));
+    }
+
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<PurchaseBalanceDTO> addPayment(
+            @PathVariable Long id,
+            @RequestBody PurchasePaymentDTO request) {
+        PurchaseBalanceDTO balance = purchasePaymentService.addPayment(SecurityUtils.getCurrentUserId(), id, request);
+        return new ResponseEntity<>(balance, HttpStatus.CREATED);
+    }
+
+    @DeleteMapping("/{id}/payments/{paymentId}")
+    public ResponseEntity<PurchaseBalanceDTO> deletePayment(
+            @PathVariable Long id,
+            @PathVariable Long paymentId) {
+        return ResponseEntity.ok(
+                purchasePaymentService.deletePayment(SecurityUtils.getCurrentUserId(), id, paymentId));
+    }
+    
+    @GetMapping("/payables")
+    public ResponseEntity<OutstandingReportDTO> getPayables() {
+        return ResponseEntity.ok(purchaseService.getPayablesReport(SecurityUtils.getCurrentUserId()));
     }
 }

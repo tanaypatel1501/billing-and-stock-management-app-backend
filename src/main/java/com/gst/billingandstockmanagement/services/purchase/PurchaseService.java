@@ -1,6 +1,7 @@
 package com.gst.billingandstockmanagement.services.purchase;
 
 import com.gst.billingandstockmanagement.dto.PurchaseDTO;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingReportDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -11,4 +12,5 @@ public interface PurchaseService {
     PurchaseDTO getPurchaseById(Long purchaseId, Long userId);
     Page<PurchaseDTO> getPurchases(Long userId, String search, LocalDate fromDate, LocalDate toDate, Pageable pageable);
     void revertPurchase(Long purchaseId, Long userId);
+    OutstandingReportDTO getPayablesReport(Long userId);
 }

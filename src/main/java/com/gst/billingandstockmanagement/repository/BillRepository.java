@@ -2,7 +2,7 @@ package com.gst.billingandstockmanagement.repository;
 
 import com.gst.billingandstockmanagement.entities.Bill;
 import com.gst.billingandstockmanagement.entities.User;
-import com.gst.billingandstockmanagement.dto.sales.OutstandingBillRow;
+import com.gst.billingandstockmanagement.dto.sales.OutstandingRow;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,11 +38,10 @@ public interface BillRepository extends JpaRepository<Bill, Long>, JpaSpecificat
     @Query("SELECT MIN(b.invoiceDate) FROM Bill b WHERE b.user.id = :userId AND b.reverted = false")
     LocalDate findFirstBillDate(@Param("userId") Long userId);
 
-    // Open bills: not reverted, with money still outstanding. Aggregated into the aging report by the service.
+    // Open bills: not reverted, with money still outstanding. Aggregated into the aging report by OutstandingReportBuilder.
     @Query(value = """
-        SELECT b.id AS billId,
-               b.purchaser_id AS purchaserId,
-               COALESCE(pu.name, b.purchaser_name) AS customerName,
+        SELECT b.purchaser_id AS partyId,
+               COALESCE(pu.name, b.purchaser_name) AS partyName,
                DATE_FORMAT(b.invoice_date, '%Y-%m-%d') AS invoiceDate,
                b.total_amount AS total,
                COALESCE(pay.paid, 0) AS paid
@@ -56,5 +55,5 @@ public interface BillRepository extends JpaRepository<Bill, Long>, JpaSpecificat
           AND b.total_amount - COALESCE(pay.paid, 0) > 0.005
         ORDER BY b.invoice_date, b.id
         """, nativeQuery = true)
-    List<OutstandingBillRow> findOutstandingBills(@Param("userId") Long userId);
+    List<OutstandingRow> findOutstandingBills(@Param("userId") Long userId);
 }

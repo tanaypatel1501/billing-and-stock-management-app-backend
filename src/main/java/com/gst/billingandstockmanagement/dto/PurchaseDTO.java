@@ -35,4 +35,10 @@ public class PurchaseDTO {
 
     private boolean reverted;
     private LocalDateTime createdAt;
+    private PurchasePaymentDTO initialPayment;
+
+    private Double paidAmount;
+    private Double outstandingAmount;
+    private String paymentStatus;                 // UNPAID, PARTIAL or PAID
+    private List<PurchasePaymentDTO> payments;    // filled by the detail endpoint only
 }
